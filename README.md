@@ -6,6 +6,77 @@ It is designed for large playlists, remote-friendly browsing, fast provider swit
 
 Built for Android TV first, Darshini focuses on the things generic IPTV apps usually get wrong: D-pad navigation, quick channel movement, large-library organization, and a player that still feels good to use from the couch. Phone and tablet installs are also supported, but the primary UX target is TV.
 
+# Guide to Installing Darshini APK on Fire Stick & Google TV
+
+**Direct APK Link:** `https://github.com/SriharshaShesham/Darshini/releases/download/v1.0.0/app-release.apk`
+
+*Tip: Typing this long URL with a TV remote can be tedious. Consider using a free URL shortener like [TinyURL](https://tinyurl.com) to make a short link (e.g., `tinyurl.com/darshini1`) before starting.*
+
+---
+
+## 🔥 PART 1: Amazon Fire Stick Instructions
+
+### Step 1: Enable Developer Options
+1. Navigate to **Settings** (the gear icon on the home screen).
+2. Select **My Fire TV** > **About**.
+3. Highlight the first item (your Fire TV Stick model) and press the center **Select button** on your remote **7 times** until a message at the bottom says: *"No need, you are already a developer."*
+4. Press the back button once to return to **My Fire TV**. You will see a new menu item called **Developer Options**.
+5. Click **Developer Options** > **Install unknown apps**. *(Leave this screen open for Step 2).*
+
+### Step 2: Install & Authorize the "Downloader" App
+1. Press the Home button and go to the **Find / Search** bar on the home screen.
+2. Search for **"Downloader"** (the app with the orange logo) and install it.
+3. Before opening it, return to **Settings** > **My Fire TV** > **Developer Options** > **Install unknown apps**.
+4. Find **Downloader** in the list and toggle it to **ON**.
+
+### Step 3: Download & Install the APK
+1. Launch the **Downloader** app and select **Allow** when it requests storage access.
+2. Click inside the URL entry box on the Home tab.
+3. Type the direct APK URL or your shortened link carefully:
+   `https://github.com/SriharshaShesham/Darshini/releases/download/v1.0.0/app-release.apk`
+4. Click **Go**. The app will download the file from GitHub.
+5. Once the download finishes, an installation prompt will overlay the screen. Select **Install**.
+6. After installation completes, click **Done**. 
+7. Select **Delete** and then **Delete** again to clear out the temporary setup file and save device storage.
+
+### Step 4: Locate Your App
+1. Press and hold the **Home** button on your remote, then select **Apps**.
+2. Scroll to the bottom of the list to find **Darshini**.
+3. Highlight the app, press the **Options button (three horizontal lines)** on your remote, and select **Move to front** to pin it to your home screen.
+
+---
+
+## 📺 PART 2: Google TV Instructions (Chromecast, Sony, TCL, etc.)
+
+### Step 1: Enable Developer Options
+1. Click your **Profile/Settings (Gear)** icon in the top-right corner of the screen.
+2. Select **System** > **About**.
+3. Scroll down to **Android TV OS Build** and click it repeatedly **7 times** until a notification appears saying *"You are now a developer!"*
+4. Press the back button to return to the main **Settings** menu.
+5. Navigate to **Apps** > **Security & Restrictions** > **Unknown sources**. *(Leave this screen open for Step 2).*
+
+### Step 2: Install & Authorize the "Downloader" App
+1. Return to the home screen, go to the **Apps** tab, and select **Search for apps**.
+2. Search for **"Downloader"** (the app with the orange logo) and install it.
+3. Before opening it, return to **Settings** > **Apps** > **Security & Restrictions** > **Unknown sources**.
+4. Find **Downloader** in the list and toggle the switch to **ON**.
+
+### Step 3: Download & Install the APK
+1. Open the **Downloader** app and select **Allow** to grant storage permissions.
+2. Click inside the box on the Home tab to bring up the keyboard.
+3. Type the direct URL or your shortened link:
+   `https://github.com/SriharshaShesham/Darshini/releases/download/v1.0.0/app-release.apk`
+4. Click **Go** to download the package.
+5. An installation prompt will automatically pop up. Select **Install**.
+6. *Google Play Protect Warning:* If a warning flags it as an unknown developer, click **More Details** > **Install Anyway**.
+7. Once installed, select **Done**.
+8. Choose **Delete** and confirm **Delete** again to wipe the temporary installer package from your local storage.
+
+### Step 4: Locate Your App
+1. Go to **Settings** > **Apps** > **See all apps**.
+2. Find **Darshini** in the list to launch it. 
+*(Note: If a sideloaded app doesn't natively appear in the regular Google TV launcher grid, you can use a custom launcher like Projectivy Launcher or Sideload Launcher from the Play Store to create a direct shortcut).*
+
 ---
 
 ## Custom Extensions & Modded Features
