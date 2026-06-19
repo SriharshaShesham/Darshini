@@ -53,6 +53,11 @@ android {
     namespace = "com.streamvault.app"
     compileSdk = 36
 
+    @Suppress("DEPRECATION")
+    aaptOptions {
+        noCompress.add("png")
+    }
+
     defaultConfig {
         applicationId = "com.streamvault.app"
         minSdk = 25
