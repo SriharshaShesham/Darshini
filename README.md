@@ -33,7 +33,7 @@ Built for Android TV first, Darshini focuses on the things generic IPTV apps usu
 1. Launch the **Downloader** app and select **Allow** when it requests storage access.
 2. Click inside the URL entry box on the Home tab.
 3. Type the direct APK URL or your shortened link carefully:
-   `https://github.com/SriharshaShesham/Darshini/releases/download/v1.0.0/app-release.apk`
+   `https://tinyurl.com/darshiniapp`
 4. Click **Go**. The app will download the file from GitHub.
 5. Once the download finishes, an installation prompt will overlay the screen. Select **Install**.
 6. After installation completes, click **Done**. 
@@ -65,7 +65,7 @@ Built for Android TV first, Darshini focuses on the things generic IPTV apps usu
 1. Open the **Downloader** app and select **Allow** to grant storage permissions.
 2. Click inside the box on the Home tab to bring up the keyboard.
 3. Type the direct URL or your shortened link:
-   `https://github.com/SriharshaShesham/Darshini/releases/download/v1.0.0/app-release.apk`
+   `https://tinyurl.com/darshiniapp`
 4. Click **Go** to download the package.
 5. An installation prompt will automatically pop up. Select **Install**.
 6. *Google Play Protect Warning:* If a warning flags it as an unknown developer, click **More Details** > **Install Anyway**.
