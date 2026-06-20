@@ -8,9 +8,9 @@ Built for Android TV first, Darshini focuses on the things generic IPTV apps usu
 
 # Guide to Installing Darshini APK on Fire Stick & Google TV
 
-**Direct APK Link:** `https://github.com/SriharshaShesham/Darshini/releases/download/v1.0.0/app-release.apk`
+**Direct APK Link:** [https://github.com/SriharshaShesham/Darshini/releases/download/v1.0.0/app-release.apk](https://github.com/SriharshaShesham/Darshini/releases/download/v1.0.0/app-release.apk)
 
-*Tip: Typing this long URL with a TV remote can be tedious. Consider using a free URL shortener like [TinyURL](https://tinyurl.com) to make a short link (e.g., `tinyurl.com/darshini1`) before starting.*
+
 
 ---
 
