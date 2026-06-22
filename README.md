@@ -1,18 +1,64 @@
 # Darshini IPTV Player
 
-Darshini is a TV-first IPTV player for Android TV built with Kotlin, Jetpack Compose, Room, Hilt, and Media3. 
+Darshini is a TV-first IPTV player for Android TV built with Kotlin, Jetpack Compose, Room, Hilt, and Media3. This project is based on the excellent open-source project **Fredolx/fred-tv-mobile** (StreamVault). Special thanks to the original developers for their work.
 
-It is designed for large playlists, remote-friendly browsing, fast provider switching, and a polished living-room playback experience. Darshini supports `M3U` playlists, `Xtream Codes`, `Stalker Portal`, and `Jellyfin` providers, with dedicated flows for `Live TV`, `Movies`, and `Series`.
 
-Built for Android TV first, Darshini focuses on the things generic IPTV apps usually get wrong: D-pad navigation, quick channel movement, large-library organization, and a player that still feels good to use from the couch. Phone and tablet installs are also supported, but the primary UX target is TV.
+
+
+---
+
+## Features
+
+This app includes several custom modifications and enhanced features to deliver a premium, personalized viewing experience along with the  features from the original development from StreamVault.
+
+
+### 1. Collapsible Sidebar & Navigation Options
+- **Focus-based Expand/Collapse**: The left sidebar navigation automatically expands to show text labels when focused, and collapses to show icons only when focus moves to content.
+- **Top Bar vs. Sidebar Switch**: You can toggle the primary navigation layout between a traditional Top Navigation Bar and the Collapsible Left Sidebar.
+  - **Steps**: Go to **Settings** -> **Interface/Navigation Options** and toggle the navigation style.
+
+### 2. Custom App Themes
+- **Multiple Color Palettes**: Choose between standard and glass-morphed themes directly within the interface. Supported profiles:
+- **Glass (Dark)** (Default) & **Glass (Light)**: Modern frosted glass overlays with spotlight focus outlines.
+- **Dark** & **Light**: Traditional solid layout palettes for high-contrast visibility.
+- **System Default**: Adapts dynamically to your Android TV's system appearance.
+- **Steps**: Go to **Settings** -> **UI** -> **App Theme** to choose your style.
+
+### 2. Custom Playlist & Category Arrangement
+- **Manual Ordering**: Arrange the order of your movie, series, and live categories exactly how you want them (e.g., place your preferred languages or categories at the top).
+- **Visibility Toggle**: Hide unused or unwanted categories with an eye icon.
+  - **Steps**:
+    1. Navigate to **Settings** and select **Movie Categories**, **Live TV Categories**, or **Series Categories**.
+    2. Choose the **Custom Order** option in the sort/arrangement window.
+    3. Use the **Up/Down/Top** arrow icons to change the priority order and the **Eye** icon to toggle visibility.
+
+### 3. Provider Details Export & Import
+- **Decrypted Export**: Export your complete provider configurations (with passwords securely decrypted) to reuse them on other devices.
+  - **Steps**:
+    1. Go to **Settings** -> **Provider Settings** and select the provider you want to back up.
+    2. Click the **Export** button.
+    3. The file will be saved directly to your `/sdcard/Download/` folder (or app-private folders as fallback) as a `.json` file.
+- **Restore / Import**:
+  - **Steps**:
+    1. Go to **Add Provider** -> **Restore Data**.
+    2. Choose the exported JSON file from your `Download` directory to restore your login credentials instantly.
+
+### 4. VOD Favorites Quick Toggle
+- **Long-Click Shortcut**: Easily add or remove movie/series cards from your favorites by holding the enter/select button (long-click).
+- **Favorites Shelf**: Your favorites are pinned unconditionally as a dedicated row for quick access.
+
+### 5. Playback Enhancements
+- **Next Episode Shortcut**: Added a "Next Episode" button directly next to the fast forward button in the player control bar when watching series.
+- **External Player Support**: Option to switch the built-in media player with external players like VLC or MX Player.
+  - **Steps**: Toggle the Player settings under **Settings** -> **Player Options** -> **External Playback Mode**.
+
+---
 
 # Guide to Installing Darshini APK on Fire Stick & Google TV
 
 **Download APK:** [Darshini V1.0.1](https://tinyurl.com/darshiniapp)
 
 
-
----
 
 ## 🔥 PART 1: Amazon Fire Stick Instructions
 
@@ -79,53 +125,9 @@ Built for Android TV first, Darshini focuses on the things generic IPTV apps usu
 
 ---
 
-## Custom Extensions & Modded Features
 
-This version includes several custom modifications and enhanced features to deliver a premium, personalized viewing experience:
 
-### 1. Collapsible Sidebar & Navigation Options
-- **Focus-based Expand/Collapse**: The left sidebar navigation automatically expands to show text labels when focused, and collapses to show icons only when focus moves to content.
-- **Top Bar vs. Sidebar Switch**: You can toggle the primary navigation layout between a traditional Top Navigation Bar and the Collapsible Left Sidebar.
-  - **Steps**: Go to **Settings** -> **Interface/Navigation Options** and toggle the navigation style.
-+
-+### 2. Custom App Themes
-+- **Multiple Color Palettes**: Choose between standard and glass-morphed themes directly within the interface. Supported profiles:
-+  - **Glass (Dark)** (Default) & **Glass (Light)**: Modern frosted glass overlays with spotlight focus outlines.
-+  - **Dark** & **Light**: Traditional solid layout palettes for high-contrast visibility.
-+  - **System Default**: Adapts dynamically to your Android TV's system appearance.
-+  - **Steps**: Go to **Settings** -> **UI** -> **App Theme** to choose your style.
-
-### 2. Custom Playlist & Category Arrangement
-- **Manual Ordering**: Arrange the order of your movie, series, and live categories exactly how you want them (e.g., place your preferred languages or categories at the top).
-- **Visibility Toggle**: Hide unused or unwanted categories with an eye icon.
-  - **Steps**:
-    1. Navigate to **Settings** and select **Movie Categories**, **Live TV Categories**, or **Series Categories**.
-    2. Choose the **Custom Order** option in the sort/arrangement window.
-    3. Use the **Up/Down/Top** arrow icons to change the priority order and the **Eye** icon to toggle visibility.
-
-### 3. Provider Details Export & Import
-- **Decrypted Export**: Export your complete provider configurations (with passwords securely decrypted) to reuse them on other devices.
-  - **Steps**:
-    1. Go to **Settings** -> **Provider Settings** and select the provider you want to back up.
-    2. Click the **Export** button.
-    3. The file will be saved directly to your `/sdcard/Download/` folder (or app-private folders as fallback) as a `.json` file.
-- **Restore / Import**:
-  - **Steps**:
-    1. Go to **Add Provider** -> **Restore Data**.
-    2. Choose the exported JSON file from your `Download` directory to restore your login credentials instantly.
-
-### 4. VOD Favorites Quick Toggle
-- **Long-Click Shortcut**: Easily add or remove movie/series cards from your favorites by holding the enter/select button (long-click).
-- **Favorites Shelf**: Your favorites are pinned unconditionally as a dedicated row for quick access.
-
-### 5. Playback Enhancements
-- **Next Episode Shortcut**: Added a "Next Episode" button directly next to the fast forward button in the player control bar when watching series.
-- **External Player Support**: Option to switch the built-in media player with external players like VLC or MX Player.
-  - **Steps**: Toggle the Player settings under **Settings** -> **Player Options** -> **External Playback Mode**.
-
----
-
-## Features
+## Complete Features
 
 ### Provider Support
 - `Xtream Codes` API integration
