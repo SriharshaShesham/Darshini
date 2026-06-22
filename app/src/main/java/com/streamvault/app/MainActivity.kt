@@ -121,8 +121,9 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             val appLanguage by preferencesRepository.appLanguage.collectAsState(initial = "system")
+            val appTheme by preferencesRepository.appTheme.collectAsState(initial = "dark")
             val appTimeFormat by preferencesRepository.appTimeFormat.collectAsState(initial = com.streamvault.domain.model.AppTimeFormat.SYSTEM)
-            val useSideNavigation by preferencesRepository.useSideNavigation.collectAsState(initial = false)
+            val useSideNavigation by preferencesRepository.useSideNavigation.collectAsState(initial = true)
             val currentContext = LocalContext.current
             
             val configuration = remember(appLanguage) {
@@ -165,7 +166,7 @@ class MainActivity : ComponentActivity() {
                 LocalAppTimeFormat provides appTimeFormat,
                 LocalUseSideNavigation provides useSideNavigation
             ) {
-                StreamVaultTheme {
+                StreamVaultTheme(appTheme = appTheme) {
                     AppNavigation(mainActivity = this@MainActivity)
                 }
             }

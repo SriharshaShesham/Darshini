@@ -65,6 +65,7 @@ data class SettingsUiState(
     val parentalControlLevel: Int = 0,
     val hasParentalPin: Boolean = false,
     val appLanguage: String = "system",
+    val appTheme: String = "dark",
     val appLandingDestination: AppLandingDestination = AppLandingDestination.HOME,
     val appTopLevelDestinations: List<AppTopLevelDestination> = AppTopLevelDestination.defaultOrder,
     val appHomeDashboardShelves: List<AppHomeDashboardShelf> = AppHomeDashboardShelf.defaultOrder,

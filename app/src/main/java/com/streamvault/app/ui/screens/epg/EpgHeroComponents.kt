@@ -520,7 +520,7 @@ internal fun GuideToolbarButton(
         Text(
             text = label,
             modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.titleMedium,
             color = OnSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis

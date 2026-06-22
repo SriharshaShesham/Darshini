@@ -4,8 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items as gridItems
@@ -160,7 +160,10 @@ fun SeriesScreen(
             subtitle = null,
             navigationChrome = AppNavigationChrome.TopBar,
             compactHeader = true,
-            showScreenHeader = false
+            showScreenHeader = false,
+            searchQuery = uiState.searchQuery,
+            onSearchQueryChange = viewModel::setSearchQuery,
+            searchPlaceholder = stringResource(R.string.search_title)
         ) {
         if (uiState.isReorderMode && uiState.reorderCategory != null) {
             ReorderTopBar(
@@ -502,98 +505,166 @@ private fun SeriesVodContent(
             isLoading = uiState.isLoadingPreviewRows,
             onLoadMore = onLoadMorePreviewRows
         )
+        val allMatchedSeries = remember(catEntries) {
+            catEntries.flatMap { it.value }.distinctBy { it.id }
+        }
         LazyColumn(
             state = previewListState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 28.dp)
         ) {
-            item(key = "actions") {
-            VodActionChipRow(
-                    actions = buildList {
-                        add(
-                            VodActionChip(
-                                key = "browse_all",
-                                label = stringResource(R.string.library_full_browse_title_series),
-                                detail = stringResource(R.string.library_full_browse_subtitle, uiState.libraryCount),
-                                onClick = onSelectFullLibraryBrowse
-                            )
-                        )
-                        add(
-                            VodActionChip(
-                                key = "categories",
-                                label = stringResource(R.string.series_categories_title),
-                                detail = "${visibleCategoryNames.count { name -> categoryByName[name]?.id != VodBrowseDefaults.FAVORITES_SENTINEL_ID }} groups",
-                                onClick = { showCategoryPicker = true }
-                            )
-                        )
-                        add(
-                            VodActionChip(
-                                key = "favorites",
-                                label = stringResource(R.string.favorites_title),
-                                detail = stringResource(R.string.library_saved_items_count, favoriteSeries.size),
-                                onClick = { onSelectCategory(uiState.favoriteCategoryName) }
-                            )
-                        )
-                        if (continueWatching.isNotEmpty()) {
+            if (uiState.searchQuery.isBlank()) {
+                item(key = "actions") {
+                    VodActionChipRow(
+                        actions = buildList {
                             add(
                                 VodActionChip(
-                                    key = "resume",
-                                    label = stringResource(R.string.library_lens_continue),
-                                    detail = "${continueWatching.size} items",
-                                    onClick = onOpenContinueWatching
+                                    key = "browse_all",
+                                    label = stringResource(R.string.library_full_browse_title_series),
+                                    detail = stringResource(R.string.library_full_browse_subtitle, uiState.libraryCount),
+                                    onClick = onSelectFullLibraryBrowse
                                 )
                             )
-                        }
-                        if (topRatedSeries.isNotEmpty()) {
                             add(
                                 VodActionChip(
-                                    key = SeriesLibraryLens.TOP_RATED.name,
-                                    label = stringResource(R.string.library_lens_top_rated),
-                                    detail = "${topRatedSeries.size} picks",
-                                    onClick = onOpenTopRated
+                                    key = "categories",
+                                    label = stringResource(R.string.series_categories_title),
+                                    detail = "${visibleCategoryNames.count { name -> categoryByName[name]?.id != VodBrowseDefaults.FAVORITES_SENTINEL_ID }} groups",
+                                    onClick = { showCategoryPicker = true }
                                 )
                             )
-                        }
-                        if (freshSeries.isNotEmpty()) {
                             add(
                                 VodActionChip(
-                                    key = SeriesLibraryLens.FRESH.name,
-                                    label = stringResource(R.string.library_lens_fresh_series),
-                                    detail = "${freshSeries.size} picks",
-                                    onClick = onOpenFresh
+                                    key = "favorites",
+                                    label = stringResource(R.string.favorites_title),
+                                    detail = stringResource(R.string.library_saved_items_count, favoriteSeries.size),
+                                    onClick = { onSelectCategory(uiState.favoriteCategoryName) }
                                 )
                             )
-                        }
-                    },
-                    modifier = Modifier
-                        .padding(top = 2.dp, bottom = 6.dp)
-                        .focusRequester(initialFocusRequester)
-                )
-            }
-            if (continueWatching.isNotEmpty()) {
-            item(key = "continue_watching") {
-                ContinueWatchingRow(
-                        items = continueWatching,
-                        onItemClick = { history ->
-                            val rawSeriesId = history.seriesId ?: history.contentId
-                            val presentedSeries = continueSeries.firstOrNull { series ->
-                                series.rawSeriesIdsForNavigation().contains(rawSeriesId)
+                            if (continueWatching.isNotEmpty()) {
+                                add(
+                                    VodActionChip(
+                                        key = "resume",
+                                        label = stringResource(R.string.library_lens_continue),
+                                        detail = "${continueWatching.size} items",
+                                        onClick = onOpenContinueWatching
+                                    )
+                                )
                             }
-                            if (presentedSeries != null) {
-                                onSeriesClick(presentedSeries)
-                            } else {
-                                onSeriesIdClick(rawSeriesId)
+                            if (freshSeries.isNotEmpty()) {
+                                add(
+                                    VodActionChip(
+                                        key = SeriesLibraryLens.FRESH.name,
+                                        label = stringResource(R.string.dashboard_recent_series),
+                                        detail = "${freshSeries.size} picks",
+                                        onClick = onOpenFresh
+                                    )
+                                )
                             }
-                        }
+                        },
+                        modifier = Modifier
+                            .padding(top = 2.dp, bottom = 6.dp)
+                            .focusRequester(initialFocusRequester)
                     )
+                }
+                if (continueWatching.isNotEmpty()) {
+                    item(key = "continue_watching") {
+                        ContinueWatchingRow(
+                            items = continueWatching,
+                            onItemClick = { history ->
+                                val rawSeriesId = history.seriesId ?: history.contentId
+                                val presentedSeries = continueSeries.firstOrNull { series ->
+                                    series.rawSeriesIdsForNavigation().contains(rawSeriesId)
+                                }
+                                if (presentedSeries != null) {
+                                    onSeriesClick(presentedSeries)
+                                } else {
+                                    onSeriesIdClick(rawSeriesId)
+                                }
+                            }
+                        )
+                    }
+                }
+                if (favoriteSeries.isNotEmpty()) {
+                    item(key = "favorites_row") {
+                        CategoryRow(
+                            title = stringResource(R.string.favorites_title),
+                            items = favoriteSeries,
+                            onSeeAll = { onSelectCategory(uiState.favoriteCategoryName) },
+                            keySelector = { it.id }
+                        ) { series ->
+                            val isLocked = isSeriesLocked(series)
+                            SeriesCard(
+                                series = series,
+                                isLocked = isLocked,
+                                onClick = { if (isLocked) onProtectedSeriesClick(series) else onSeriesClick(series) },
+                                onLongClick = { onShowDialog(series) },
+                                modifier = Modifier.width(favoriteCardWidth)
+                            )
+                        }
+                    }
+                }
+                if (freshSeries.isNotEmpty()) {
+                    item(key = "fresh_row") {
+                        CategoryRow(
+                            title = stringResource(R.string.dashboard_recent_series),
+                            items = freshSeries,
+                            onSeeAll = onOpenFresh,
+                            keySelector = { it.id }
+                        ) { series ->
+                            val isLocked = isSeriesLocked(series)
+                            SeriesCard(
+                                series = series,
+                                isLocked = isLocked,
+                                onClick = { if (isLocked) onProtectedSeriesClick(series) else onSeriesClick(series) },
+                                onLongClick = { onShowDialog(series) }
+                            )
+                        }
+                    }
+                }
             }
-            }
-            if (favoriteSeries.isNotEmpty()) {
-            item(key = "favorites_row") {
-                CategoryRow(
-                        title = stringResource(R.string.favorites_title),
-                        items = favoriteSeries,
-                        onSeeAll = { onSelectCategory(uiState.favoriteCategoryName) },
+            if (uiState.searchQuery.isNotBlank()) {
+                if (allMatchedSeries.isNotEmpty()) {
+                    item(key = "search_results_title") {
+                        Text(
+                            text = stringResource(R.string.search_title),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color.White,
+                            modifier = Modifier.padding(start = 24.dp, top = 16.dp, bottom = 12.dp)
+                        )
+                    }
+                    val chunkedSeries = allMatchedSeries.chunked(6)
+                    itemsIndexed(chunkedSeries, key = { index, _ -> "search_row_$index" }) { rowIndex, rowSeries ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            rowSeries.forEach { series ->
+                                val isLocked = isSeriesLocked(series)
+                                SeriesCard(
+                                    series = series,
+                                    isLocked = isLocked,
+                                    onClick = { if (isLocked) onProtectedSeriesClick(series) else onSeriesClick(series) },
+                                    onLongClick = { onShowDialog(series) }
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                items(catEntries, key = { it.key }) { entry ->
+                    val categoryName = entry.key
+                    val seriesList = entry.value
+                    val matchedCategory = categoryByName[categoryName]
+                    val lockedCategory = matchedCategory?.let(isCategoryLocked) == true
+                    CategoryRow(
+                        title = categoryName,
+                        items = seriesList,
+                        onSeeAll = {
+                            if (lockedCategory && matchedCategory != null) openProtectedCategory(matchedCategory) else onSelectCategory(categoryName)
+                        },
                         keySelector = { it.id }
                     ) { series ->
                         val isLocked = isSeriesLocked(series)
@@ -602,68 +673,9 @@ private fun SeriesVodContent(
                             isLocked = isLocked,
                             onClick = { if (isLocked) onProtectedSeriesClick(series) else onSeriesClick(series) },
                             onLongClick = { onShowDialog(series) },
-                            modifier = Modifier.width(favoriteCardWidth)
+                            modifier = if (series.id == fallbackSeriesId) Modifier.focusRequester(initialFocusRequester) else Modifier
                         )
-                }
-            }
-            }
-            if (freshSeries.isNotEmpty()) {
-            item(key = "fresh_row") {
-                CategoryRow(
-                        title = stringResource(R.string.library_lens_fresh_series),
-                        items = freshSeries,
-                        onSeeAll = null,
-                        keySelector = { it.id }
-                    ) { series ->
-                        val isLocked = isSeriesLocked(series)
-                        SeriesCard(
-                            series = series,
-                            isLocked = isLocked,
-                            onClick = { if (isLocked) onProtectedSeriesClick(series) else onSeriesClick(series) },
-                            onLongClick = { onShowDialog(series) }
-                        )
-                }
-            }
-            }
-            if (topRatedSeries.isNotEmpty()) {
-            item(key = "top_rated_row") {
-                CategoryRow(
-                        title = stringResource(R.string.library_lens_top_rated),
-                        items = topRatedSeries,
-                        onSeeAll = null,
-                        keySelector = { it.id }
-                    ) { series ->
-                        val isLocked = isSeriesLocked(series)
-                        SeriesCard(
-                            series = series,
-                            isLocked = isLocked,
-                            onClick = { if (isLocked) onProtectedSeriesClick(series) else onSeriesClick(series) },
-                            onLongClick = { onShowDialog(series) }
-                        )
-                }
-            }
-            }
-            items(catEntries, key = { it.key }) { entry ->
-                val categoryName = entry.key
-                val seriesList = entry.value
-                val matchedCategory = categoryByName[categoryName]
-                val lockedCategory = matchedCategory?.let(isCategoryLocked) == true
-                CategoryRow(
-                    title = categoryName,
-                    items = seriesList,
-                    onSeeAll = {
-                        if (lockedCategory && matchedCategory != null) openProtectedCategory(matchedCategory) else onSelectCategory(categoryName)
-                    },
-                    keySelector = { it.id }
-                ) { series ->
-                    val isLocked = isSeriesLocked(series)
-                    SeriesCard(
-                        series = series,
-                        isLocked = isLocked,
-                        onClick = { if (isLocked) onProtectedSeriesClick(series) else onSeriesClick(series) },
-                        onLongClick = { onShowDialog(series) },
-                        modifier = if (series.id == fallbackSeriesId) Modifier.focusRequester(initialFocusRequester) else Modifier
-                    )
+                    }
                 }
             }
             if (uiState.isLoadingPreviewRows) {
@@ -1228,8 +1240,8 @@ private fun seriesLibraryLensLabel(lens: SeriesLibraryLens): String =
     when (lens) {
         SeriesLibraryLens.FAVORITES -> stringResource(R.string.library_lens_favorites)
         SeriesLibraryLens.CONTINUE -> stringResource(R.string.library_lens_continue)
-        SeriesLibraryLens.TOP_RATED -> stringResource(R.string.library_lens_top_rated)
-        SeriesLibraryLens.FRESH -> stringResource(R.string.library_lens_fresh_series)
+        SeriesLibraryLens.TOP_RATED -> ""
+        SeriesLibraryLens.FRESH -> stringResource(R.string.dashboard_recent_series)
     }
 
 private fun seriesFilterChips(): List<SelectionChip> {
@@ -1238,8 +1250,7 @@ private fun seriesFilterChips(): List<SelectionChip> {
         SelectionChip(LibraryFilterType.FAVORITES.name, "Favorites"),
         SelectionChip(LibraryFilterType.IN_PROGRESS.name, "Resume"),
         SelectionChip(LibraryFilterType.UNWATCHED.name, "Unwatched"),
-        SelectionChip(LibraryFilterType.RECENTLY_UPDATED.name, "Updated"),
-        SelectionChip(LibraryFilterType.TOP_RATED.name, "Top Rated")
+        SelectionChip(LibraryFilterType.RECENTLY_UPDATED.name, "Updated")
     )
 }
 

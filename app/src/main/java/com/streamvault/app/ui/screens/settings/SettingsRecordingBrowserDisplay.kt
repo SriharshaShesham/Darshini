@@ -102,6 +102,7 @@ internal fun recordingStatusLabel(status: RecordingStatus): String = when (statu
     RecordingStatus.CANCELLED -> stringResource(R.string.settings_recording_status_cancelled)
 }
 
+@Composable
 internal fun recordingStatusAccent(status: RecordingStatus): Color = when (status) {
     RecordingStatus.RECORDING -> Primary
     RecordingStatus.SCHEDULED -> Secondary

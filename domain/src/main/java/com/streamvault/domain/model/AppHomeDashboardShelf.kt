@@ -14,7 +14,6 @@ enum class AppHomeDashboardShelf(
     FAVORITE_SERIES("favorite_series", defaultEnabled = false),
     CONTINUE_WATCHING_MOVIES("continue_watching_movies", defaultEnabled = false),
     CONTINUE_WATCHING_SERIES("continue_watching_series", defaultEnabled = false),
-    TOP_RATED_MOVIES("top_rated_movies", defaultEnabled = false),
     RECOMMENDED_MOVIES("recommended_movies", defaultEnabled = false);
 
     companion object {
@@ -29,7 +28,6 @@ enum class AppHomeDashboardShelf(
             FAVORITE_SERIES,
             CONTINUE_WATCHING_MOVIES,
             CONTINUE_WATCHING_SERIES,
-            TOP_RATED_MOVIES,
             RECOMMENDED_MOVIES
         )
 

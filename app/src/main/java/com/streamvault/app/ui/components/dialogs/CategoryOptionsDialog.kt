@@ -27,11 +27,12 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.streamvault.app.R
+import com.streamvault.app.ui.theme.DialogBackground
 import com.streamvault.app.ui.theme.OnSurface
 import com.streamvault.app.ui.theme.OnSurfaceDim
 import com.streamvault.app.ui.theme.Primary
-import com.streamvault.app.ui.theme.SurfaceElevated
 import com.streamvault.app.ui.interaction.mouseClickable
+import com.streamvault.app.ui.interaction.TvButton
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.Alignment
 import com.streamvault.domain.model.Category
@@ -83,7 +84,7 @@ fun CategoryOptionsDialog(
                 .fillMaxWidth(dialogWidth)
                 .onPreviewKeyEvent(blockOpenGesture),
             shape = RoundedCornerShape(24.dp),
-            colors = SurfaceDefaults.colors(containerColor = SurfaceElevated)
+            colors = SurfaceDefaults.colors(containerColor = DialogBackground)
         ) {
             Column(
                 modifier = Modifier
@@ -194,7 +195,7 @@ fun CategoryOptionsDialog(
                     )
                 }
 
-                Button(
+                TvButton(
                     onClick = safeDismiss,
                     modifier = Modifier.mouseClickable(onClick = safeDismiss),
                     colors = ButtonDefaults.colors(
@@ -216,7 +217,7 @@ private fun PremiumDialogAction(
     onClick: () -> Unit,
     destructive: Boolean = false
 ) {
-    Button(
+    TvButton(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().mouseClickable(onClick = onClick),
         colors = ButtonDefaults.colors(

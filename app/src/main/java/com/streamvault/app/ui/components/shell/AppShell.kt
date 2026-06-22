@@ -44,50 +44,64 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import androidx.tv.material3.Icon
+import androidx.tv.material3.Surface
+import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.Border
+import com.streamvault.app.R
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
+import com.streamvault.data.preferences.PreferencesRepository
+import kotlinx.coroutines.launch
+import com.streamvault.app.ui.interaction.TvClickableSurface
+
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.zIndex
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.material3.Border
-import androidx.tv.material3.ClickableSurfaceDefaults
-import androidx.tv.material3.Icon
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
-import androidx.tv.material3.Text
-import com.streamvault.app.R
 import com.streamvault.app.MainActivity
 import com.streamvault.app.navigation.toAppRoute
 import com.streamvault.app.navigation.Routes
+import com.streamvault.app.ui.components.SearchInput
 import com.streamvault.app.ui.design.AppColors
 import com.streamvault.app.ui.design.AppMotion
 import com.streamvault.app.ui.design.FocusSpec
@@ -97,9 +111,78 @@ import com.streamvault.app.ui.interaction.TvIconButton
 import com.streamvault.app.ui.design.LocalAppShapes
 import com.streamvault.app.ui.design.LocalAppSpacing
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.CompositionLocalProvider
+import com.streamvault.app.ui.design.LocalAppColors
+import com.streamvault.app.ui.design.DarkAppColors
+import com.streamvault.app.ui.design.GlassDarkAppColors
+import com.streamvault.app.ui.design.GlassLightAppColors
+import androidx.compose.ui.draw.drawBehind
 import com.streamvault.domain.model.AppTopLevelDestination
 
-val LocalUseSideNavigation = staticCompositionLocalOf { false }
+val LocalUseSideNavigation = staticCompositionLocalOf { true }
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface AppShellEntryPoint {
+    fun preferencesRepository(): PreferencesRepository
+}
+
+@Composable
+fun ThemeToggleButton(
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current.applicationContext
+    val preferencesRepository = remember(context) {
+        EntryPointAccessors.fromApplication(context, AppShellEntryPoint::class.java).preferencesRepository()
+    }
+    val appTheme by preferencesRepository.appTheme.collectAsState(initial = "dark")
+    val isSystemDark = isSystemInDarkTheme()
+
+    val scope = rememberCoroutineScope()
+    val themeIcon = remember(appTheme) {
+        when (appTheme) {
+            "light" -> Icons.Default.DarkMode
+            "dark" -> Icons.Default.Star
+            "glass_dark" -> Icons.Default.LightMode
+            "glass_light" -> Icons.Default.LightMode
+            else -> Icons.Default.LightMode
+        }
+    }
+
+    TvIconButton(
+        onClick = {
+            scope.launch {
+                val nextTheme = when (appTheme) {
+                    "glass_dark" -> "glass_light"
+                    "glass_light" -> "light"
+                    "light" -> "dark"
+                    "dark" -> "glass_dark"
+                    else -> "glass_dark"
+                }
+                preferencesRepository.setAppTheme(nextTheme)
+            }
+        },
+        modifier = modifier,
+        colors = androidx.tv.material3.IconButtonDefaults.colors(
+            containerColor = Color.Transparent,
+            focusedContainerColor = AppColors.SurfaceEmphasis,
+            contentColor = AppColors.TextSecondary,
+            focusedContentColor = AppColors.TextPrimary
+        ),
+        border = androidx.tv.material3.IconButtonDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(FocusSpec.BorderWidth, AppColors.Focus),
+                shape = RoundedCornerShape(14.dp)
+            )
+        )
+    ) {
+        Icon(
+            imageVector = themeIcon,
+            contentDescription = "Toggle theme",
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
 
 enum class AppNavigationChrome {
     Rail,
@@ -117,6 +200,9 @@ fun AppScreenScaffold(
     topBarVisible: Boolean = true,
     compactHeader: Boolean = false,
     showScreenHeader: Boolean = true,
+    searchQuery: String? = null,
+    onSearchQueryChange: ((String) -> Unit)? = null,
+    searchPlaceholder: String? = null,
     header: (@Composable ColumnScope.() -> Unit)? = null,
     topBarActions: (@Composable RowScope.() -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(),
@@ -125,35 +211,96 @@ fun AppScreenScaffold(
     val spacing = LocalAppSpacing.current
     val resolvedChrome = if (LocalUseSideNavigation.current) AppNavigationChrome.Rail else AppNavigationChrome.TopBar
 
+    val currentPalette = LocalAppColors.current
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        AppColors.Canvas,
-                        AppColors.CanvasElevated,
-                        AppColors.Surface
+            .drawBehind {
+                val isGlassDark = currentPalette == GlassDarkAppColors
+                val isGlassLight = currentPalette == GlassLightAppColors
+                if (isGlassDark) {
+                    // Base dark gradient
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFF030812), Color(0xFF091224)),
+                            start = Offset(0f, 0f),
+                            end = Offset(size.width, size.height)
+                        )
                     )
-                )
-            )
+                    // Violet glow blob top-left
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(Color(0x3B6D28D9), Color.Transparent),
+                            center = Offset(size.width * 0.2f, size.height * 0.2f),
+                            radius = size.width * 0.6f
+                        ),
+                        center = Offset(size.width * 0.2f, size.height * 0.2f),
+                        radius = size.width * 0.6f
+                    )
+                    // Teal glow blob bottom-right
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(Color(0x2B0D9488), Color.Transparent),
+                            center = Offset(size.width * 0.8f, size.height * 0.8f),
+                            radius = size.width * 0.6f
+                        ),
+                        center = Offset(size.width * 0.8f, size.height * 0.8f),
+                        radius = size.width * 0.6f
+                    )
+                } else if (isGlassLight) {
+                    // Base light gradient
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFFF8FAFC), Color(0xFFF1F5F9)),
+                            start = Offset(0f, 0f),
+                            end = Offset(size.width, size.height)
+                        )
+                    )
+                    // Pink pastel glow top-left
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(Color(0x40FBCFE8), Color.Transparent),
+                            center = Offset(size.width * 0.2f, size.height * 0.2f),
+                            radius = size.width * 0.7f
+                        ),
+                        center = Offset(size.width * 0.2f, size.height * 0.2f),
+                        radius = size.width * 0.7f
+                    )
+                    // Sky blue pastel glow bottom-right
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(Color(0x40BAE6FD), Color.Transparent),
+                            center = Offset(size.width * 0.8f, size.height * 0.8f),
+                            radius = size.width * 0.7f
+                        ),
+                        center = Offset(size.width * 0.8f, size.height * 0.8f),
+                        radius = size.width * 0.7f
+                    )
+                } else {
+                    // Standard theme
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                currentPalette.canvas,
+                                currentPalette.canvasElevated,
+                                currentPalette.surface
+                            ),
+                            start = Offset(0f, 0f),
+                            end = Offset(size.width, size.height)
+                        )
+                    )
+                }
+            }
     ) {
         if (resolvedChrome == AppNavigationChrome.Rail) {
-            var isRailFocused by remember { mutableStateOf(false) }
-            val railWidth by animateDpAsState(
-                targetValue = if (isRailFocused) 180.dp else 80.dp,
-                label = "railWidth"
-            )
-
             Row(modifier = Modifier.fillMaxSize()) {
                 DestinationRail(
                     currentRoute = currentRoute,
                     onNavigate = onNavigate,
-                    isExpanded = isRailFocused,
+                    isExpanded = true,
                     modifier = Modifier
                         .fillMaxHeight()
-                        .width(railWidth)
-                        .onFocusChanged { isRailFocused = it.hasFocus }
+                        .width(240.dp)
                 )
 
                 Column(
@@ -166,20 +313,53 @@ fun AppScreenScaffold(
                             bottom = spacing.safeBottom
                         )
                 ) {
-                    if (showScreenHeader) {
-                        AppScreenHeader(
-                            title = title,
-                            subtitle = subtitle,
-                            modifier = Modifier.fillMaxWidth(),
-                            compact = compactHeader
-                        )
-                        if (header != null) {
-                            Spacer(modifier = Modifier.height(spacing.lg))
-                            header()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = spacing.lg),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = AppColors.TextPrimary
+                            )
+                            if (subtitle != null) {
+                                Text(
+                                    text = subtitle,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = AppColors.TextSecondary
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.height(spacing.lg))
-                    } else if (header != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(spacing.md)
+                        ) {
+                            if (searchQuery != null && onSearchQueryChange != null) {
+                                SearchInput(
+                                    value = searchQuery,
+                                    onValueChange = onSearchQueryChange,
+                                    placeholder = searchPlaceholder ?: stringResource(R.string.search_title),
+                                    modifier = Modifier.width(280.dp)
+                                )
+                            }
+                            ThemeToggleButton()
+                            if (topBarActions != null) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    topBarActions()
+                                }
+                            }
+                        }
+                    }
+                    if (header != null) {
                         header()
+                        Spacer(modifier = Modifier.height(spacing.md))
                     }
                     Column(
                         modifier = Modifier
@@ -203,18 +383,27 @@ fun AppScreenScaffold(
                     TopNavigationBar(
                         currentRoute = currentRoute,
                         onNavigate = onNavigate,
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = onSearchQueryChange,
+                        searchPlaceholder = searchPlaceholder,
                         actions = topBarActions,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                 }
                 if (showScreenHeader) {
-                    AppScreenHeader(
-                        title = title,
-                        subtitle = subtitle,
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        compact = true
-                    )
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AppScreenHeader(
+                            title = title,
+                            subtitle = subtitle,
+                            modifier = Modifier.weight(1f),
+                            compact = true
+                        )
+                    }
                     if (header != null) {
                         Spacer(modifier = Modifier.height(8.dp))
                         header()
@@ -278,6 +467,9 @@ fun AppScreenHeader(
 private fun TopNavigationBar(
     currentRoute: String,
     onNavigate: (String) -> Unit,
+    searchQuery: String? = null,
+    onSearchQueryChange: ((String) -> Unit)? = null,
+    searchPlaceholder: String? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -333,12 +525,27 @@ private fun TopNavigationBar(
                     )
                 }
             }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (searchQuery != null && onSearchQueryChange != null) {
+                    SearchInput(
+                        value = searchQuery,
+                        onValueChange = onSearchQueryChange,
+                        placeholder = searchPlaceholder ?: stringResource(R.string.search_title),
+                        modifier = Modifier.width(200.dp)
+                    )
+                }
+                ThemeToggleButton()
+            }
             if (actions != null) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    content = actions
-                )
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    actions()
+                }
             }
         }
     }
@@ -437,11 +644,11 @@ private fun TopNavigationButton(
                 imageVector = icon,
                 contentDescription = label,
                 tint = if (selected) AppColors.Brand else AppColors.TextSecondary,
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(20.dp)
             )
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.titleMedium,
                 color = if (selected) AppColors.TextPrimary else AppColors.TextSecondary
             )
         }
@@ -732,7 +939,6 @@ private fun DestinationRail(
 
     Box(
         modifier = modifier
-            .padding(start = 0.dp, top = spacing.safeTop, bottom = spacing.safeBottom)
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -741,6 +947,7 @@ private fun DestinationRail(
                     )
                 )
             )
+            .padding(start = 0.dp, top = spacing.safeTop, bottom = spacing.safeBottom)
             .focusProperties {
                 onEnter = {
                     val activeItem = findActiveDestinationItem(items, currentRoute)
@@ -808,7 +1015,7 @@ private fun RailButton(
         label = "railButtonScale"
     )
 
-    Surface(
+    TvClickableSurface(
         onClick = onClick,
         modifier = modifier
             .focusRequester(focusRequester)
@@ -822,7 +1029,7 @@ private fun RailButton(
                 scaleY = scale
             }
             .onFocusChanged { isFocused = it.isFocused },
-        shape = ClickableSurfaceDefaults.shape(androidx.compose.ui.graphics.RectangleShape),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = if (selected) AppColors.BrandMuted else Color.Transparent,
             focusedContainerColor = AppColors.SurfaceEmphasis
@@ -830,27 +1037,36 @@ private fun RailButton(
         border = ClickableSurfaceDefaults.border(
             focusedBorder = Border(
                 border = BorderStroke(FocusSpec.BorderWidth, AppColors.Focus),
-                shape = androidx.compose.ui.graphics.RectangleShape
+                shape = RoundedCornerShape(12.dp)
             )
-        )
+        ),
+        cornerRadius = 12.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = if (isExpanded) 14.dp else 0.dp, vertical = 8.dp),
-            horizontalArrangement = if (isExpanded) Arrangement.spacedBy(10.dp) else Arrangement.Center,
+                .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(24.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(if (selected) AppColors.Brand else Color.Transparent)
+            )
+            Spacer(modifier = Modifier.width(if (isExpanded) 12.dp else 24.dp))
             Icon(
                 imageVector = icon,
                 contentDescription = label,
                 tint = if (selected) AppColors.Brand else AppColors.TextSecondary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(24.dp)
             )
             if (isExpanded) {
+                Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     color = if (selected) AppColors.TextPrimary else AppColors.TextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

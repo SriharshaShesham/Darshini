@@ -25,6 +25,12 @@
 
     <queries>
         <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT_TREE" />
+        </intent>
+        <intent>
             <action android:name="com.streamvault.plugin.API" />
         </intent>
         <intent>

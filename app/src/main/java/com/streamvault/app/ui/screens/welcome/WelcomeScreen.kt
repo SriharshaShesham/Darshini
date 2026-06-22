@@ -313,6 +313,7 @@ private fun WelcomeStartCard(
     }
 }
 
+@Composable
 private fun sectionColor(section: Section): Color = when (section) {
     Section.LIVE -> AppColors.Brand
     Section.VOD -> AppColors.Success

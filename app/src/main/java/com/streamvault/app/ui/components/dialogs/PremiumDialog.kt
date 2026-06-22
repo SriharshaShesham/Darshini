@@ -42,10 +42,13 @@ import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.streamvault.app.device.rememberIsTelevisionDevice
 import com.streamvault.app.ui.interaction.mouseClickable
+import com.streamvault.app.ui.theme.DialogBackground
 import com.streamvault.app.ui.design.AppColors
 import com.streamvault.app.ui.design.FocusSpec
+import com.streamvault.app.ui.interaction.TvButton
 
 internal val LocalDialogCanInteract = compositionLocalOf { true }
+
 
 @Composable
 internal fun rememberDialogOpenGestureBlocker(canInteract: Boolean): (KeyEvent) -> Boolean = remember(canInteract) {
@@ -102,16 +105,16 @@ fun PremiumDialog(
                     Surface(
                         modifier = dialogModifier,
                         shape = RoundedCornerShape(28.dp),
-                        colors = SurfaceDefaults.colors(containerColor = AppColors.SurfaceElevated)
+                        colors = SurfaceDefaults.colors(containerColor = DialogBackground)
                     ) {
                         Column(
                             modifier = Modifier
                                 .background(
                                     Brush.verticalGradient(
                                         colors = listOf(
-                                            AppColors.BrandMuted.copy(alpha = 0.18f),
-                                            AppColors.SurfaceElevated,
-                                            AppColors.Surface
+                                            DialogBackground,
+                                            DialogBackground,
+                                            DialogBackground
                                         )
                                     )
                                 )
@@ -171,16 +174,16 @@ fun PremiumDialog(
                     Surface(
                         modifier = dialogModifier,
                         shape = RoundedCornerShape(28.dp),
-                        colors = SurfaceDefaults.colors(containerColor = AppColors.SurfaceElevated)
+                        colors = SurfaceDefaults.colors(containerColor = DialogBackground)
                     ) {
                         Column(
                             modifier = Modifier
                                 .background(
                                     Brush.verticalGradient(
                                         colors = listOf(
-                                            AppColors.BrandMuted.copy(alpha = 0.18f),
-                                            AppColors.SurfaceElevated,
-                                            AppColors.Surface
+                                            DialogBackground,
+                                            DialogBackground,
+                                            DialogBackground
                                         )
                                     )
                                 )
@@ -245,7 +248,7 @@ fun PremiumDialogActionButton(
         else -> AppColors.TextPrimary
     }
 
-    Button(
+    TvButton(
         onClick = { if (canInteract) onClick() },
         enabled = enabled,
         modifier = modifier.fillMaxWidth().mouseClickable(enabled = enabled, onClick = { if (canInteract) onClick() }),
@@ -287,7 +290,7 @@ fun PremiumDialogFooterButton(
     }
     val contentColor = if (emphasized) Color.Black else AppColors.TextPrimary
 
-    Button(
+    TvButton(
         onClick = { if (canInteract) onClick() },
         enabled = enabled,
         modifier = Modifier.mouseClickable(enabled = enabled, onClick = { if (canInteract) onClick() }),

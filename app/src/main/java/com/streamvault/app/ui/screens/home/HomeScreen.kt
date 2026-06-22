@@ -346,7 +346,14 @@ fun HomeScreen(
             subtitle = uiState.activeLiveSourceTitle.ifBlank { uiState.provider?.name },
             navigationChrome = AppNavigationChrome.TopBar,
             compactHeader = true,
-            showScreenHeader = false
+            showScreenHeader = false,
+            searchQuery = uiState.channelSearchQuery,
+            onSearchQueryChange = { query ->
+                if (!isReorderMode) {
+                    viewModel.updateChannelSearchQuery(query)
+                }
+            },
+            searchPlaceholder = stringResource(R.string.home_search_channels)
         ) {
             if (isReorderMode) {
                 ReorderTopBar(

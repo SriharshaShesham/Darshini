@@ -1518,6 +1518,7 @@ fun NextEpisodeCountdownOverlay(
     modifier: Modifier = Modifier
 ) {
     val playNowFocusRequester = remember { FocusRequester() }
+    val primaryColor = Primary
 
     LaunchedEffect(Unit) {
         playNowFocusRequester.requestFocusSafely(
@@ -1544,7 +1545,7 @@ fun NextEpisodeCountdownOverlay(
             Text(
                 text = stringResource(R.string.player_up_next),
                 style = MaterialTheme.typography.labelMedium,
-                color = Primary,
+                color = primaryColor,
                 fontWeight = FontWeight.Bold
             )
 
@@ -1564,7 +1565,7 @@ fun NextEpisodeCountdownOverlay(
                             style = Stroke(width = 4.dp.toPx())
                         )
                         drawArc(
-                            color = Primary,
+                            color = primaryColor,
                             startAngle = -90f,
                             sweepAngle = animatedSweep,
                             useCenter = false,

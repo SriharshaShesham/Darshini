@@ -8,6 +8,7 @@ internal fun SettingsUiState.applyPreferenceSnapshot(snapshot: SettingsPreferenc
         parentalControlLevel = snapshot.parentalControlLevel,
         hasParentalPin = snapshot.hasParentalPin,
         appLanguage = snapshot.appLanguage,
+        appTheme = snapshot.appTheme,
         appLandingDestination = snapshot.appLandingDestination,
         appTopLevelDestinations = snapshot.appTopLevelDestinations,
         appHomeDashboardShelves = snapshot.appHomeDashboardShelves,

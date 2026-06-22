@@ -20,6 +20,7 @@ import com.streamvault.domain.model.VodHttpProtocolMode
 internal data class SettingsScreenLabels(
     val buildVerificationLabel: String,
     val appLanguageLabel: String,
+    val appThemeLabel: String,
     val appLandingDestinationLabel: String,
     val topNavigationSummaryLabel: String,
     val homeDashboardSummaryLabel: String,
@@ -64,6 +65,15 @@ internal fun rememberSettingsScreenLabels(
     }
     val appLanguageLabel = remember(uiState.appLanguage, context) {
         displayLanguageLabel(uiState.appLanguage, context.getString(R.string.settings_system_default))
+    }
+    val appThemeLabel = remember(uiState.appTheme, context) {
+        when (uiState.appTheme) {
+            "light" -> context.getString(R.string.settings_theme_light)
+            "dark" -> context.getString(R.string.settings_theme_dark)
+            "glass_dark" -> context.getString(R.string.settings_theme_glass_dark)
+            "glass_light" -> context.getString(R.string.settings_theme_glass_light)
+            else -> context.getString(R.string.settings_theme_system)
+        }
     }
     val appLandingDestinationLabel = remember(uiState.appLandingDestination, context) {
         formatAppLandingDestinationLabel(uiState.appLandingDestination, context)
@@ -181,6 +191,7 @@ internal fun rememberSettingsScreenLabels(
     return SettingsScreenLabels(
         buildVerificationLabel = buildVerificationLabel,
         appLanguageLabel = appLanguageLabel,
+        appThemeLabel = appThemeLabel,
         appLandingDestinationLabel = appLandingDestinationLabel,
         topNavigationSummaryLabel = topNavigationSummaryLabel,
         homeDashboardSummaryLabel = homeDashboardSummaryLabel,

@@ -67,7 +67,10 @@ internal fun CategorySortModeDialog(
         widthFraction = 0.52f,
         content = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                CategorySortMode.entries.forEach { mode ->
+                val sortedModes = remember {
+                    listOf(CategorySortMode.CUSTOM) + CategorySortMode.entries.filter { it != CategorySortMode.CUSTOM }
+                }
+                sortedModes.forEach { mode ->
                     TvClickableSurface(
                         onClick = { onModeSelected(mode) },
                         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(14.dp)),

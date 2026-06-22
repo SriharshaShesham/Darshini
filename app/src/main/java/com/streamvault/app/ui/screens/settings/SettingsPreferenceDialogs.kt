@@ -76,6 +76,8 @@ internal fun SettingsPreferenceDialogs(
     onShowEthernetQualityDialogChange: (Boolean) -> Unit,
     showLanguageDialog: Boolean,
     onShowLanguageDialogChange: (Boolean) -> Unit,
+    showThemeDialog: Boolean,
+    onShowThemeDialogChange: (Boolean) -> Unit,
     categorySortDialogType: String?,
     onCategorySortDialogTypeChange: (String?) -> Unit,
     onShowCategoryLanguagePriorityDialogTypeChange: (String?) -> Unit,
@@ -334,6 +336,32 @@ internal fun SettingsPreferenceDialogs(
                     onSelect = {
                         viewModel.setAppLanguage(option.tag)
                         onShowLanguageDialogChange(false)
+                    }
+                )
+            }
+        }
+    }
+
+    if (showThemeDialog) {
+        PremiumSelectionDialog(
+            title = stringResource(R.string.settings_select_theme),
+            onDismiss = { onShowThemeDialogChange(false) }
+        ) {
+            val themeOptions = listOf(
+                "glass_dark" to stringResource(R.string.settings_theme_glass_dark),
+                "glass_light" to stringResource(R.string.settings_theme_glass_light),
+                "dark" to stringResource(R.string.settings_theme_dark),
+                "light" to stringResource(R.string.settings_theme_light),
+                "system" to stringResource(R.string.settings_theme_system)
+            )
+            themeOptions.forEachIndexed { index, option ->
+                LevelOption(
+                    level = index,
+                    text = option.second,
+                    currentLevel = if (uiState.appTheme == option.first) index else -1,
+                    onSelect = {
+                        viewModel.setAppTheme(option.first)
+                        onShowThemeDialogChange(false)
                     }
                 )
             }

@@ -73,6 +73,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.tv.material3.*
 import com.streamvault.app.R
 import com.streamvault.app.device.rememberIsTelevisionDevice
+import com.streamvault.app.device.isFireTvDevice
+import com.streamvault.app.device.removableAppStorageDirs
 import com.streamvault.app.pairing.ProviderQrPairingState
 import com.streamvault.app.pairing.ProviderQrPairingStatus
 import com.streamvault.app.ui.components.dialogs.PremiumDialog
@@ -186,6 +188,8 @@ fun ProviderSetupScreen(
     var handledInitialImportUri by rememberSaveable { mutableStateOf<String?>(null) }
     var showDiscardDraftDialog by rememberSaveable { mutableStateOf(false) }
     var showImportOptionsDialog by rememberSaveable { mutableStateOf(false) }
+    var pendingImportCandidates by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    var pendingImportType by remember { mutableStateOf<String?>(null) } // "backup" or "m3u"
 
     // ?? File import helper ????????????????????????????????????????????????????
     fun importM3uUri(uri: android.net.Uri) {
@@ -232,11 +236,11 @@ fun ProviderSetupScreen(
     }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = ActivityResultContracts.GetContent()
     ) { uri: android.net.Uri? -> if (uri != null) importM3uUri(uri) }
 
     val backupImportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = ActivityResultContracts.GetContent()
     ) { uri: android.net.Uri? -> uri?.let { viewModel.inspectBackup(it.toString()) } }
 
     val driveSignInLauncher = rememberLauncherForActivityResult(
@@ -481,7 +485,11 @@ fun ProviderSetupScreen(
                         onUpdateStalkerRequestRule = { index, rule -> if (index in stalkerRequestRules.indices) stalkerRequestRules[index] = rule },
                         onRemoveStalkerRequestRule = { index -> if (index in stalkerRequestRules.indices) stalkerRequestRules.removeAt(index) },
                         fileImportError = fileImportError,
-                        onFilePick = { filePickerLauncher.launch(arrayOf("*/*")) },
+                        onFilePick = {
+                            val candidates = scanLocalFiles(context, listOf(".m3u", ".m3u8"))
+                            pendingImportCandidates = candidates + ("Browse other folders (System Picker)" to "__system_picker__")
+                            pendingImportType = "m3u"
+                        },
                         onLoginXtream = { viewModel.loginXtream(serverUrl, username, password, name, httpUserAgent, httpHeaders) },
                         onLoginStalker = { viewModel.loginStalker(serverUrl, stalkerMacAddress, stalkerAuthMode, username, password, name, "", httpHeaders, stalkerDeviceProfile, stalkerDeviceTimezone, stalkerDeviceLocale, stalkerSerialNumber, stalkerDeviceId, stalkerDeviceId2, stalkerSignature, buildStalkerAdvancedOptionsJson()) },
                         onAddM3u = { viewModel.addM3u(m3uUrl, name, httpUserAgent, httpHeaders) },
@@ -540,7 +548,11 @@ fun ProviderSetupScreen(
                         onUpdateStalkerRequestRule = { index, rule -> if (index in stalkerRequestRules.indices) stalkerRequestRules[index] = rule },
                         onRemoveStalkerRequestRule = { index -> if (index in stalkerRequestRules.indices) stalkerRequestRules.removeAt(index) },
                         fileImportError = fileImportError,
-                        onFilePick = { filePickerLauncher.launch(arrayOf("*/*")) },
+                        onFilePick = {
+                            val candidates = scanLocalFiles(context, listOf(".m3u", ".m3u8"))
+                            pendingImportCandidates = candidates + ("Browse other folders (System Picker)" to "__system_picker__")
+                            pendingImportType = "m3u"
+                        },
                         onLoginXtream = { viewModel.loginXtream(serverUrl, username, password, name, httpUserAgent, httpHeaders) },
                         onLoginStalker = { viewModel.loginStalker(serverUrl, stalkerMacAddress, stalkerAuthMode, username, password, name, "", httpHeaders, stalkerDeviceProfile, stalkerDeviceTimezone, stalkerDeviceLocale, stalkerSerialNumber, stalkerDeviceId, stalkerDeviceId2, stalkerSignature, buildStalkerAdvancedOptionsJson()) },
                         onAddM3u = { viewModel.addM3u(m3uUrl, name, httpUserAgent, httpHeaders) },
@@ -627,7 +639,9 @@ fun ProviderSetupScreen(
             onDismiss = { showImportOptionsDialog = false },
             onImportBackup = {
                 showImportOptionsDialog = false
-                backupImportLauncher.launch(arrayOf("application/json"))
+                val candidates = scanLocalFiles(context, listOf(".json"))
+                pendingImportCandidates = candidates + ("Browse other folders (System Picker)" to "__system_picker__")
+                pendingImportType = "backup"
             },
             onImportFromDrive = {
                 showImportOptionsDialog = false
@@ -640,6 +654,67 @@ fun ProviderSetupScreen(
         )
     }
 
+    if (pendingImportCandidates.isNotEmpty()) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {
+                pendingImportCandidates = emptyList()
+                pendingImportType = null
+            },
+            title = {
+                Text(
+                    text = if (pendingImportType == "backup") "Choose Backup File" else "Choose Playlist File"
+                )
+            },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    pendingImportCandidates.forEach { (name, uri) ->
+                        TextButton(
+                            onClick = {
+                                val selectedUri = uri
+                                pendingImportCandidates = emptyList()
+                                val currentType = pendingImportType
+                                pendingImportType = null
+                                if (selectedUri == "__system_picker__") {
+                                    try {
+                                        if (currentType == "backup") {
+                                            backupImportLauncher.launch("application/json")
+                                        } else {
+                                            filePickerLauncher.launch("*/*")
+                                        }
+                                    } catch (e: android.content.ActivityNotFoundException) {
+                                        fileImportError = "Document picker not available on this device"
+                                    }
+                                } else {
+                                    if (currentType == "backup") {
+                                        viewModel.inspectBackup(selectedUri)
+                                    } else {
+                                        runCatching { android.net.Uri.parse(selectedUri) }.getOrNull()?.let(::importM3uUri)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(text = name, color = OnSurface)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingImportCandidates = emptyList()
+                    pendingImportType = null
+                }) {
+                    Text(
+                        text = stringResource(R.string.settings_cancel),
+                        color = OnSurface
+                    )
+                }
+            },
+            containerColor = SurfaceElevated,
+            titleContentColor = OnSurface,
+            textContentColor = TextSecondary
+        )
+    }
 }
 
     @Composable
@@ -3198,5 +3273,44 @@ private fun generateJellyfinQuickConnectQrCode(serverUrl: String, code: String):
         bitmap
     } catch (e: Exception) {
         null
+    }
+}
+
+private fun scanLocalFiles(context: android.content.Context, extensions: List<String>): List<Pair<String, String>> {
+    val paths = mutableListOf<java.io.File>()
+    context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)?.let { docDir ->
+        paths.add(java.io.File(docDir, "Backups"))
+        paths.add(docDir)
+    }
+    paths.add(java.io.File(context.filesDir, "Backups"))
+    paths.add(context.filesDir)
+    
+    val downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+    if (downloadDir != null) {
+        paths.add(downloadDir)
+    }
+    
+    if (context.isFireTvDevice()) {
+        context.removableAppStorageDirs().forEach { dir ->
+            paths.add(java.io.File(dir, "Backups"))
+            paths.add(dir)
+        }
+    }
+    
+    val files = paths.distinct()
+        .flatMap { dir ->
+            if (dir.isDirectory) {
+                dir.listFiles()?.filter { file ->
+                    file.isFile && extensions.any { ext -> file.name.endsWith(ext, ignoreCase = true) }
+                } ?: emptyList()
+            } else {
+                emptyList()
+            }
+        }
+        .distinctBy { it.absolutePath }
+        .sortedByDescending { it.lastModified() }
+        
+    return files.map { file ->
+        file.name to android.net.Uri.fromFile(file).toString()
     }
 }

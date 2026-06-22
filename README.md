@@ -87,6 +87,13 @@ This version includes several custom modifications and enhanced features to deli
 - **Focus-based Expand/Collapse**: The left sidebar navigation automatically expands to show text labels when focused, and collapses to show icons only when focus moves to content.
 - **Top Bar vs. Sidebar Switch**: You can toggle the primary navigation layout between a traditional Top Navigation Bar and the Collapsible Left Sidebar.
   - **Steps**: Go to **Settings** -> **Interface/Navigation Options** and toggle the navigation style.
++
++### 2. Custom App Themes
++- **Multiple Color Palettes**: Choose between standard and glass-morphed themes directly within the interface. Supported profiles:
++  - **Glass (Dark)** (Default) & **Glass (Light)**: Modern frosted glass overlays with spotlight focus outlines.
++  - **Dark** & **Light**: Traditional solid layout palettes for high-contrast visibility.
++  - **System Default**: Adapts dynamically to your Android TV's system appearance.
++  - **Steps**: Go to **Settings** -> **UI** -> **App Theme** to choose your style.
 
 ### 2. Custom Playlist & Category Arrangement
 - **Manual Ordering**: Arrange the order of your movie, series, and live categories exactly how you want them (e.g., place your preferred languages or categories at the top).

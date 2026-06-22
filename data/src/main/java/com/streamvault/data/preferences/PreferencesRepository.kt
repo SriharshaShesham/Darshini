@@ -105,6 +105,7 @@ class PreferencesRepository @Inject constructor(
         val PARENTAL_PIN_SALT = stringPreferencesKey("parental_pin_salt")
         val DEFAULT_CATEGORY_ID = longPreferencesKey("default_category_id")
         val APP_LANGUAGE = stringPreferencesKey("app_language")
+        val APP_THEME = stringPreferencesKey("app_theme")
         val APP_LANDING_DESTINATION = stringPreferencesKey("app_landing_destination")
         val APP_TOP_LEVEL_DESTINATIONS = stringPreferencesKey("app_top_level_destinations")
         val CATEGORY_LANGUAGE_PRIORITY = stringPreferencesKey("category_language_priority")
@@ -1287,6 +1288,16 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
+    val appTheme: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.APP_THEME] ?: "glass_dark"
+    }
+
+    suspend fun setAppTheme(theme: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.APP_THEME] = theme
+        }
+    }
+
     suspend fun setRemoteShortcutSelection(
         profile: RemoteShortcutProfile,
         button: RemoteColorButton,
@@ -1343,6 +1354,30 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
+    fun getCategoryLanguagePriority(providerId: Long, type: ContentType): Flow<List<String>> {
+        val key = stringPreferencesKey("category_priority_${providerId}_${type.name.lowercase()}")
+        return context.dataStore.data.map { preferences ->
+            val encoded = preferences[key]
+            if (encoded.isNullOrBlank()) {
+                val globalEncoded = preferences[PreferencesKeys.CATEGORY_LANGUAGE_PRIORITY]
+                if (globalEncoded.isNullOrBlank()) {
+                    emptyList()
+                } else {
+                    globalEncoded.split(",").map { it.trim().lowercase() }.filter { it.isNotBlank() }
+                }
+            } else {
+                encoded.split(",").map { it.trim().lowercase() }.filter { it.isNotBlank() }
+            }
+        }
+    }
+
+    suspend fun setCategoryLanguagePriority(providerId: Long, type: ContentType, languages: List<String>) {
+        val key = stringPreferencesKey("category_priority_${providerId}_${type.name.lowercase()}")
+        context.dataStore.edit { preferences ->
+            preferences[key] = languages.joinToString(",") { it.trim().lowercase() }
+        }
+    }
+
     suspend fun setAppHomeDashboardShelves(shelves: List<AppHomeDashboardShelf>) {
         val normalized = AppHomeDashboardShelf.normalizeForStorage(shelves)
         context.dataStore.edit { preferences ->
@@ -1381,7 +1416,7 @@ class PreferencesRepository @Inject constructor(
     }
 
     val useSideNavigation: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[PreferencesKeys.USE_SIDE_NAVIGATION] ?: false
+        preferences[PreferencesKeys.USE_SIDE_NAVIGATION] ?: true
     }
 
     suspend fun setUseSideNavigation(enabled: Boolean) {

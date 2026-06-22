@@ -150,7 +150,7 @@ class MoviesViewModel @Inject constructor(
                         movieRepository.getLibraryCount(provider.id),
                         preferencesRepository.getHiddenCategoryIds(provider.id, ContentType.MOVIE),
                         preferencesRepository.getCategorySortMode(provider.id, ContentType.MOVIE),
-                        preferencesRepository.categoryLanguagePriority
+                        preferencesRepository.getCategoryLanguagePriority(provider.id, ContentType.MOVIE)
                     ) { values ->
                         val allFavorites = values[0] as List<com.streamvault.domain.model.Favorite>
                         val customCategories = values[1] as List<Category>
@@ -311,7 +311,7 @@ class MoviesViewModel @Inject constructor(
                         movieRepository.getCategories(provider.id),
                         preferencesRepository.getHiddenCategoryIds(provider.id, ContentType.MOVIE),
                         preferencesRepository.getCategorySortMode(provider.id, ContentType.MOVIE),
-                        preferencesRepository.categoryLanguagePriority
+                        preferencesRepository.getCategoryLanguagePriority(provider.id, ContentType.MOVIE)
                     ) { values ->
                         val allFavorites = values[0] as List<com.streamvault.domain.model.Favorite>
                         val customCategories = values[1] as List<Category>

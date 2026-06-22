@@ -40,6 +40,7 @@ import com.streamvault.domain.model.Provider
 import androidx.compose.ui.res.stringResource
 import com.streamvault.app.R
 import com.streamvault.app.ui.design.requestFocusSafely
+import com.streamvault.app.ui.design.AppColors
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -102,7 +103,7 @@ fun SettingsScreen(
     }
 
     val openDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let { viewModel.inspectBackup(it.toString()) }
     }
@@ -257,7 +258,7 @@ fun SettingsScreen(
         val uri = initialBackupImportUri?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
         if (handledInitialBackupImportUri == uri) return@LaunchedEffect
         handledInitialBackupImportUri = uri
-        dialogState.selectedCategory = 5
+        dialogState.selectedCategory = 6
         viewModel.inspectBackup(uri)
     }
 
@@ -293,7 +294,7 @@ fun SettingsScreen(
                     Modifier
                         .width(1.dp)
                         .fillMaxHeight()
-                        .background(Color.White.copy(alpha = 0.07f))
+                        .background(AppColors.Divider)
                 )
 
                 SettingsContentPane(
@@ -424,36 +425,8 @@ fun SettingsScreen(
                     onShareCrashReport = ::shareCrashReport,
                     onDeleteCrashReport = viewModel::deleteCrashReport,
                     onRestoreBackup = {
-                        val onFireTv = context.isFireTv()
-                        val primary: () -> Unit = if (onFireTv) {
-                            { importTreeLauncher.launch(null) }
-                        } else {
-                            {
-                                openDocumentLauncher.launch(
-                                    arrayOf("application/json", "text/json", "application/x-json", "application/octet-stream", "*/*")
-                                )
-                            }
-                        }
-                        val fallback: () -> Unit = if (onFireTv) {
-                            {
-                                openDocumentLauncher.launch(
-                                    arrayOf("application/json", "text/json", "application/x-json", "application/octet-stream", "*/*")
-                                )
-                            }
-                        } else {
-                            { importTreeLauncher.launch(null) }
-                        }
-                        try {
-                            primary()
-                        } catch (e: ActivityNotFoundException) {
-                            try {
-                                fallback()
-                            } catch (e2: ActivityNotFoundException) {
-                                viewModel.showUserMessage(
-                                    context.getString(R.string.settings_backup_folder_picker_unavailable)
-                                )
-                            }
-                        }
+                        val candidates = scanLocalBackupCandidates(context)
+                        pendingImportCandidates = candidates + ("Browse other folders (System Picker)" to "__system_picker__")
                     },
                     onDriveSignIn = { viewModel.beginDriveSignIn(driveSignInLauncher) },
                     onDriveSignOut = viewModel::signOutDrive,
@@ -490,8 +463,38 @@ fun SettingsScreen(
                     pendingImportCandidates.forEach { (name, uri) ->
                         TextButton(
                             onClick = {
+                                val selectedUri = uri
                                 pendingImportCandidates = emptyList()
-                                viewModel.inspectBackup(uri)
+                                if (selectedUri == "__system_picker__") {
+                                    val onFireTv = context.isFireTv()
+                                    val primary: () -> Unit = if (onFireTv) {
+                                        { importTreeLauncher.launch(null) }
+                                    } else {
+                                        {
+                                            openDocumentLauncher.launch("*/*")
+                                        }
+                                    }
+                                    val fallback: () -> Unit = if (onFireTv) {
+                                        {
+                                            openDocumentLauncher.launch("*/*")
+                                        }
+                                    } else {
+                                        { importTreeLauncher.launch(null) }
+                                    }
+                                    try {
+                                        primary()
+                                    } catch (e: android.content.ActivityNotFoundException) {
+                                        try {
+                                            fallback()
+                                        } catch (e2: android.content.ActivityNotFoundException) {
+                                            viewModel.showUserMessage(
+                                                context.getString(R.string.settings_backup_folder_picker_unavailable)
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    viewModel.inspectBackup(selectedUri)
+                                }
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -516,3 +519,39 @@ fun SettingsScreen(
 }
 }
 
+private fun scanLocalBackupCandidates(context: Context): List<Pair<String, String>> {
+    val paths = mutableListOf<File>()
+    context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)?.let { docDir ->
+        paths.add(File(docDir, "Backups"))
+        paths.add(docDir)
+    }
+    paths.add(File(context.filesDir, "Backups"))
+    paths.add(context.filesDir)
+    
+    val downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+    if (downloadDir != null) {
+        paths.add(downloadDir)
+    }
+    
+    if (context.isFireTvDevice()) {
+        context.removableAppStorageDirs().forEach { dir ->
+            paths.add(File(dir, "Backups"))
+            paths.add(dir)
+        }
+    }
+    
+    val files = paths.distinct()
+        .flatMap { dir ->
+            if (dir.isDirectory) {
+                dir.listFiles()?.filter { it.isFile && it.name.endsWith(".json", ignoreCase = true) } ?: emptyList()
+            } else {
+                emptyList()
+            }
+        }
+        .distinctBy { it.absolutePath }
+        .sortedByDescending { it.lastModified() }
+        
+    return files.map { file ->
+        file.name to Uri.fromFile(file).toString()
+    }
+}

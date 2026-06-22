@@ -27,6 +27,8 @@ import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.focus.focusRequester
+import com.streamvault.app.ui.interaction.mouseClickable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -36,10 +38,10 @@ import androidx.tv.material3.Text
 import com.streamvault.app.R
 import com.streamvault.app.ui.components.dialogs.rememberDialogOpenGestureBlocker
 import com.streamvault.app.ui.interaction.TvClickableSurface
+import com.streamvault.app.ui.theme.DialogBackground
 import com.streamvault.app.ui.theme.OnBackground
 import com.streamvault.app.ui.theme.OnSurfaceDim
 import com.streamvault.app.ui.theme.Primary
-import com.streamvault.app.ui.theme.SurfaceElevated
 
 @Composable
 internal fun PremiumSelectionDialog(
@@ -58,7 +60,7 @@ internal fun PremiumSelectionDialog(
         val dialogContent: @Composable (Modifier) -> Unit = { resolvedModifier ->
             androidx.compose.material3.Surface(
                 shape = RoundedCornerShape(14.dp),
-                color = SurfaceElevated,
+                color = DialogBackground,
                 modifier = resolvedModifier
                     .border(1.dp, Primary.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                     .onPreviewKeyEvent(blockOpenGesture)
@@ -134,25 +136,35 @@ internal fun LevelOption(
     subtitle: String? = null,
     onSelect: () -> Unit
 ) {
-    Row(
+    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    TvClickableSurface(
+        onClick = onSelect,
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+        cornerRadius = 8.dp,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onSelect)
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .focusRequester(focusRequester)
+            .mouseClickable(focusRequester = focusRequester, onClick = onSelect)
     ) {
-        RadioButton(
-            selected = level == currentLevel,
-            onClick = onSelect
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        if (subtitle != null) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(text, style = MaterialTheme.typography.titleSmall, color = OnBackground)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = OnSurfaceDim)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(
+                selected = level == currentLevel,
+                onClick = null
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            if (subtitle != null) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(text, style = MaterialTheme.typography.titleSmall, color = OnBackground)
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = OnSurfaceDim)
+                }
+            } else {
+                Text(text, style = MaterialTheme.typography.bodyMedium, color = OnBackground)
             }
-        } else {
-            Text(text, style = MaterialTheme.typography.bodyMedium, color = OnBackground)
         }
     }
 }

@@ -50,7 +50,7 @@ internal fun observeGuideDefaultCategoryOptions(
                     getCustomCategories(activeSource.providerId, ContentType.LIVE),
                     preferencesRepository.getHiddenCategoryIds(activeSource.providerId, ContentType.LIVE),
                     preferencesRepository.getCategorySortMode(activeSource.providerId, ContentType.LIVE),
-                    preferencesRepository.categoryLanguagePriority
+                    preferencesRepository.getCategoryLanguagePriority(activeSource.providerId, ContentType.LIVE)
                 ) { categories, customCategories, hiddenCategoryIds, sortMode, priorityKeywords ->
                     val visibleProviderCategories = applyProviderCategoryDisplayPreferences(
                         categories = categories.filter { it.id != ChannelRepository.ALL_CHANNELS_ID },

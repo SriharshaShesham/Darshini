@@ -44,6 +44,7 @@ internal fun observeSettingsPreferenceSnapshot(
             parentalControlLevel = level,
             hasParentalPin = hasParentalPin,
             appLanguage = "system",
+            appTheme = "dark",
             appLandingDestination = AppLandingDestination.HOME,
             appTopLevelDestinations = AppTopLevelDestination.defaultOrder,
             appHomeDashboardShelves = AppHomeDashboardShelf.defaultOrder,
@@ -88,7 +89,7 @@ internal fun observeSettingsPreferenceSnapshot(
             xtreamBase64TextCompatibility = false,
             liveTvChannelMode = LiveTvChannelMode.PRO,
             showLiveSourceSwitcher = false,
-            useSideNavigation = false,
+            useSideNavigation = true,
             showAllChannelsCategory = true,
             showRecentChannelsCategory = true,
             remoteShortcutPreferences = com.streamvault.domain.model.RemoteShortcutPreferences(),
@@ -119,6 +120,8 @@ internal fun observeSettingsPreferenceSnapshot(
             cachedAppUpdatePublishedAt = null,
             categoryLanguagePriority = emptyList()
         )
+    }.combine(preferencesRepository.appTheme) { snapshot, theme ->
+        snapshot.copy(appTheme = theme)
     }.combine(preferencesRepository.appLanguage) { snapshot, language ->
         snapshot.copy(appLanguage = language)
     }.combine(preferencesRepository.appLandingDestination) { snapshot, destination ->

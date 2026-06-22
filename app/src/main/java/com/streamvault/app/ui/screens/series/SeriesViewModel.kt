@@ -150,7 +150,7 @@ class SeriesViewModel @Inject constructor(
                         seriesRepository.getLibraryCount(provider.id),
                         preferencesRepository.getHiddenCategoryIds(provider.id, ContentType.SERIES),
                         preferencesRepository.getCategorySortMode(provider.id, ContentType.SERIES),
-                        preferencesRepository.categoryLanguagePriority
+                        preferencesRepository.getCategoryLanguagePriority(provider.id, ContentType.SERIES)
                     ) { values ->
                         val allFavorites = values[0] as List<com.streamvault.domain.model.Favorite>
                         val customCategories = values[1] as List<Category>
@@ -312,7 +312,7 @@ class SeriesViewModel @Inject constructor(
                         playbackHistoryRepository.getRecentlyWatchedByProvider(provider.id, limit = 100),
                         preferencesRepository.getHiddenCategoryIds(provider.id, ContentType.SERIES),
                         preferencesRepository.getCategorySortMode(provider.id, ContentType.SERIES),
-                        preferencesRepository.categoryLanguagePriority
+                        preferencesRepository.getCategoryLanguagePriority(provider.id, ContentType.SERIES)
                     ) { values ->
                         val allFavorites = values[0] as List<com.streamvault.domain.model.Favorite>
                         val customCategories = values[1] as List<Category>

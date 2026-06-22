@@ -44,6 +44,7 @@ import com.streamvault.app.ui.theme.OnBackground
 import com.streamvault.app.ui.theme.OnSurface
 import com.streamvault.app.ui.theme.OnSurfaceDim
 import com.streamvault.app.ui.theme.Primary
+import com.streamvault.app.ui.theme.SettingsCardBackground
 
 @Composable
 internal fun SettingsSectionHeader(
@@ -72,14 +73,15 @@ internal fun SettingsRow(label: String, value: String) {
     val focusRequester = remember { FocusRequester() }
     TvClickableSurface(
         onClick = {},
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = Color.Transparent,
+            containerColor = SettingsCardBackground,
             focusedContainerColor = Primary.copy(alpha = 0.15f)
         ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
         modifier = Modifier
             .fillMaxWidth()
+            .padding(bottom = 8.dp)
             .focusRequester(focusRequester)
             .mouseClickable(
                 focusRequester = focusRequester,
@@ -89,7 +91,7 @@ internal fun SettingsRow(label: String, value: String) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -110,14 +112,15 @@ internal fun ClickableSettingsRow(
     val focusRequester = remember { FocusRequester() }
     TvClickableSurface(
         onClick = { if (enabled) onClick() },
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = Color.Transparent,
-            focusedContainerColor = if (enabled) Primary.copy(alpha = 0.15f) else Color.Transparent
+            containerColor = SettingsCardBackground,
+            focusedContainerColor = if (enabled) Primary.copy(alpha = 0.15f) else SettingsCardBackground
         ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
         modifier = Modifier
             .fillMaxWidth()
+            .padding(bottom = 8.dp)
             .focusRequester(focusRequester)
             .mouseClickable(
                 focusRequester = focusRequester,
@@ -127,7 +130,7 @@ internal fun ClickableSettingsRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 8.dp + indent, end = 8.dp, top = 12.dp, bottom = 12.dp),
+                .padding(start = 12.dp + indent, end = 12.dp, top = 12.dp, bottom = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -157,14 +160,15 @@ internal fun SwitchSettingsRow(
     val focusRequester = remember { FocusRequester() }
     TvClickableSurface(
         onClick = { if (enabled) onCheckedChange(!checked) },
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = Color.Transparent,
-            focusedContainerColor = if (enabled) Primary.copy(alpha = 0.15f) else Color.Transparent
+            containerColor = SettingsCardBackground,
+            focusedContainerColor = if (enabled) Primary.copy(alpha = 0.15f) else SettingsCardBackground
         ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
         modifier = Modifier
             .fillMaxWidth()
+            .padding(bottom = 8.dp)
             .focusRequester(focusRequester)
             .mouseClickable(
                 focusRequester = focusRequester,
@@ -174,7 +178,7 @@ internal fun SwitchSettingsRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 8.dp + indent, end = 8.dp, top = 12.dp, bottom = 12.dp),
+                .padding(start = 12.dp + indent, end = 12.dp, top = 12.dp, bottom = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -304,6 +308,7 @@ internal fun SettingsNavItem(
             focusedContainerColor = Primary.copy(alpha = 0.22f)
         ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+        cornerRadius = 0.dp,
         modifier = modifier
             .fillMaxWidth()
             .focusRequester(focusRequester)
@@ -325,19 +330,6 @@ internal fun SettingsNavItem(
                         shape = RoundedCornerShape(2.dp)
                     )
             )
-            Box(
-                Modifier
-                    .size(28.dp)
-                    .background(accentColor.copy(alpha = 0.18f), RoundedCornerShape(7.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = badgeChar,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = accentColor,
-                    fontWeight = FontWeight.Bold
-                )
-            }
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,

@@ -442,7 +442,7 @@ internal fun AddCombinedProviderDialog(
                                 )
                                 RadioButton(
                                     selected = isSelected,
-                                    onClick = { selectedProviderId = provider.id }
+                                    onClick = null
                                 )
                             }
                         }

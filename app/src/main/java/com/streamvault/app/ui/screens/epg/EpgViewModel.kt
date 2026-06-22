@@ -1038,7 +1038,7 @@ class EpgViewModel @Inject constructor(
             getCustomCategories(provider.id, ContentType.LIVE),
             preferencesRepository.getHiddenCategoryIds(provider.id, ContentType.LIVE),
             preferencesRepository.getCategorySortMode(provider.id, ContentType.LIVE),
-            preferencesRepository.categoryLanguagePriority
+            preferencesRepository.getCategoryLanguagePriority(provider.id, ContentType.LIVE)
         ) { providerCategories, customCategories, hiddenCategoryIds, sortMode, priorityKeywords ->
             GuideCategoryData(
                 providerCategories = providerCategories,

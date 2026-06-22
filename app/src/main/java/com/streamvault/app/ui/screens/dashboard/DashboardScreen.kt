@@ -277,14 +277,6 @@ fun DashboardScreen(
                         onItemClick = onContinueWatchingItemClick
                     )
 
-                    AppHomeDashboardShelf.TOP_RATED_MOVIES -> CategoryRow(
-                        title = stringResource(R.string.dashboard_top_rated_movies),
-                        items = uiState.topRatedMovies,
-                        keySelector = { it.id },
-                        onSeeAll = { onNavigate(Routes.MOVIES) }
-                    ) { movie ->
-                        MovieCard(movie = movie, onClick = { onMovieClick(movie) })
-                    }
 
                     AppHomeDashboardShelf.RECOMMENDED_MOVIES -> CategoryRow(
                         title = stringResource(R.string.dashboard_recommended_movies),

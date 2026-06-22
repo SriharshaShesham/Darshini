@@ -502,6 +502,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setAppTheme(theme: String) {
+        viewModelScope.launch {
+            preferencesRepository.setAppTheme(theme)
+        }
+    }
+
     fun setAppLandingDestination(destination: AppLandingDestination) {
         viewModelScope.launch {
             preferencesRepository.setAppLandingDestination(
@@ -517,6 +523,17 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             preferencesRepository.setCategoryLanguagePriority(languages)
         }
+    }
+
+    fun setCategoryLanguagePriority(contentType: ContentType, languages: List<String>) {
+        val providerId = _uiState.value.activeProviderId ?: return
+        viewModelScope.launch {
+            preferencesRepository.setCategoryLanguagePriority(providerId, contentType, languages)
+        }
+    }
+
+    fun getCategoryLanguagePriorityFlow(providerId: Long, contentType: ContentType): Flow<List<String>> {
+        return preferencesRepository.getCategoryLanguagePriority(providerId, contentType)
     }
 
     fun setAppTopLevelDestinations(destinations: List<AppTopLevelDestination>) {

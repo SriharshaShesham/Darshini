@@ -719,6 +719,15 @@
     <string name="settings_app_language">App Language</string>
     <string name="settings_system_default">System Default</string>
     <string name="settings_select_language">Select Language</string>
+    <string name="settings_ui">UI</string>
+    <string name="settings_app_theme">App Theme</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_glass_dark">Glass (Dark)</string>
+    <string name="settings_theme_glass_light">Glass (Light)</string>
+    <string name="settings_theme_system">System Default</string>
+    <string name="settings_select_theme">Select Theme</string>
+
 
     <string name="settings_backup_restore">Backup &amp; Restore</string>
     <string name="settings_backup_subtitle">Export or import favorites, groups, and preferences.</string>

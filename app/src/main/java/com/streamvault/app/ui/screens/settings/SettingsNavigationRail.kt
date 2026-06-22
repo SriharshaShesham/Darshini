@@ -16,6 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.streamvault.app.R
 import com.streamvault.app.ui.theme.Primary
+import com.streamvault.app.ui.design.AppColors
 
 private data class SettingsNavEntry(
     val label: String,
@@ -30,6 +31,11 @@ internal fun SettingsNavigationRail(
     onCategorySelected: (Int) -> Unit
 ) {
     val entries = listOf(
+        SettingsNavEntry(
+            label = stringResource(R.string.settings_ui),
+            icon = "U",
+            accent = Primary
+        ),
         SettingsNavEntry(
             label = stringResource(R.string.settings_providers),
             icon = "P",
@@ -76,7 +82,7 @@ internal fun SettingsNavigationRail(
         modifier = Modifier
             .width(236.dp)
             .fillMaxHeight()
-            .background(Color.Black.copy(alpha = 0.25f)),
+            .background(AppColors.SurfaceElevated),
         contentPadding = PaddingValues(top = 76.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {

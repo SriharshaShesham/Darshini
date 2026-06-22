@@ -188,7 +188,8 @@ fun BrowseSearchLaunchCard(
                 border = BorderStroke(FocusSpec.BorderWidth, AppColors.Focus),
                 shape = RoundedCornerShape(22.dp)
             )
-        )
+        ),
+        cornerRadius = 22.dp
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
@@ -234,7 +235,8 @@ fun BrowseHeroPanel(
                 border = BorderStroke(FocusSpec.BorderWidth, AppColors.Focus),
                 shape = RoundedCornerShape(28.dp)
             )
-        )
+        ),
+        cornerRadius = 28.dp
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             // Gradient fallback always visible; covered by AsyncImage on successful load

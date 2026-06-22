@@ -458,7 +458,7 @@ class HomeViewModel @Inject constructor(
                     preferencesRepository.getHiddenCategoryIds(providerId, ContentType.LIVE),
                     preferencesRepository.getCategorySortMode(providerId, ContentType.LIVE),
                     preferencesRepository.getPinnedCategoryIds(providerId, ContentType.LIVE),
-                    preferencesRepository.categoryLanguagePriority
+                    preferencesRepository.getCategoryLanguagePriority(providerId, ContentType.LIVE)
                 ) { values ->
                     val providerCats = values[0] as List<Category>
                     val customCats = values[1] as List<Category>

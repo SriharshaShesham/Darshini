@@ -38,6 +38,7 @@ import com.streamvault.app.ui.theme.OnBackground
 import com.streamvault.app.ui.theme.OnSurface
 import com.streamvault.app.ui.theme.OnSurfaceDim
 import com.streamvault.app.ui.theme.Primary
+import com.streamvault.app.ui.theme.SettingsCardBackground
 import com.streamvault.domain.model.CategorySortMode
 import com.streamvault.domain.model.ContentType
 import com.streamvault.domain.model.LiveChannelGroupingMode
@@ -55,6 +56,7 @@ internal fun LazyListScope.settingsBrowsingSection(
     guideDefaultCategoryLabel: String,
     timeFormatLabel: String,
     appLanguageLabel: String,
+    appThemeLabel: String,
     onShowLiveTvModeDialogChange: (Boolean) -> Unit,
     onShowLiveTvFiltersDialogChange: (Boolean) -> Unit,
     onShowLiveTvQuickFilterVisibilityDialogChange: (Boolean) -> Unit,
@@ -73,6 +75,7 @@ internal fun LazyListScope.settingsBrowsingSection(
     onShowVodVariantPreferenceDialogChange: (Boolean) -> Unit,
     onCategorySortDialogTypeChange: (String?) -> Unit,
     onShowLanguageDialogChange: (Boolean) -> Unit,
+    onShowThemeDialogChange: (Boolean) -> Unit,
     onRemoteShortcutDialogTargetChange: (RemoteShortcutDialogTarget?) -> Unit
 ) {
     item {
@@ -98,16 +101,16 @@ internal fun LazyListScope.settingsBrowsingSection(
         )
         TvClickableSurface(
             onClick = { viewModel.setShowLiveSourceSwitcher(!uiState.showLiveSourceSwitcher) },
-            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
             colors = ClickableSurfaceDefaults.colors(
-                containerColor = Color.Transparent,
+                containerColor = SettingsCardBackground,
                 focusedContainerColor = Primary.copy(alpha = 0.15f)
             ),
             scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -120,16 +123,16 @@ internal fun LazyListScope.settingsBrowsingSection(
         }
         TvClickableSurface(
             onClick = { viewModel.setUseSideNavigation(!uiState.useSideNavigation) },
-            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
             colors = ClickableSurfaceDefaults.colors(
-                containerColor = Color.Transparent,
+                containerColor = SettingsCardBackground,
                 focusedContainerColor = Primary.copy(alpha = 0.15f)
             ),
             scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -142,16 +145,16 @@ internal fun LazyListScope.settingsBrowsingSection(
         }
         TvClickableSurface(
             onClick = { viewModel.setShowAllChannelsCategory(!uiState.showAllChannelsCategory) },
-            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
             colors = ClickableSurfaceDefaults.colors(
-                containerColor = Color.Transparent,
+                containerColor = SettingsCardBackground,
                 focusedContainerColor = Primary.copy(alpha = 0.15f)
             ),
             scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -164,16 +167,16 @@ internal fun LazyListScope.settingsBrowsingSection(
         }
         TvClickableSurface(
             onClick = { viewModel.setShowRecentChannelsCategory(!uiState.showRecentChannelsCategory) },
-            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
             colors = ClickableSurfaceDefaults.colors(
-                containerColor = Color.Transparent,
+                containerColor = SettingsCardBackground,
                 focusedContainerColor = Primary.copy(alpha = 0.15f)
             ),
             scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -196,16 +199,16 @@ internal fun LazyListScope.settingsBrowsingSection(
         )
         TvClickableSurface(
             onClick = { viewModel.setHideDecorativeLiveRows(!uiState.hideDecorativeLiveRows) },
-            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
             colors = ClickableSurfaceDefaults.colors(
-                containerColor = Color.Transparent,
+                containerColor = SettingsCardBackground,
                 focusedContainerColor = Primary.copy(alpha = 0.15f)
             ),
             scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -279,34 +282,18 @@ internal fun LazyListScope.settingsBrowsingSection(
             indent = 24.dp
         )
         HorizontalDivider(color = Color.White.copy(alpha = 0.07f), modifier = Modifier.padding(vertical = 4.dp))
-        ClickableSettingsRow(
-            label = stringResource(R.string.settings_category_sort_live),
-            value = formatCategorySortModeLabel(uiState.categorySortModes[ContentType.LIVE] ?: CategorySortMode.DEFAULT, context),
-            onClick = { onCategorySortDialogTypeChange(ContentType.LIVE.name) }
-        )
-        ClickableSettingsRow(
-            label = stringResource(R.string.settings_category_sort_movies),
-            value = formatCategorySortModeLabel(uiState.categorySortModes[ContentType.MOVIE] ?: CategorySortMode.DEFAULT, context),
-            onClick = { onCategorySortDialogTypeChange(ContentType.MOVIE.name) }
-        )
-        ClickableSettingsRow(
-            label = stringResource(R.string.settings_category_sort_series),
-            value = formatCategorySortModeLabel(uiState.categorySortModes[ContentType.SERIES] ?: CategorySortMode.DEFAULT, context),
-            onClick = { onCategorySortDialogTypeChange(ContentType.SERIES.name) }
-        )
-        HorizontalDivider(color = Color.White.copy(alpha = 0.07f), modifier = Modifier.padding(vertical = 4.dp))
         TvClickableSurface(
             onClick = { onShowLanguageDialogChange(true) },
-            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
             colors = ClickableSurfaceDefaults.colors(
-                containerColor = Color.Transparent,
+                containerColor = SettingsCardBackground,
                 focusedContainerColor = Primary.copy(alpha = 0.15f)
             ),
             scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -543,6 +530,7 @@ private fun RemoteShortcutButtonCard(
     }
 }
 
+@Composable
 private fun RemoteColorButton.accentColor(): Color = when (this) {
     RemoteColorButton.RED -> AccentRed
     RemoteColorButton.GREEN -> AccentGreen

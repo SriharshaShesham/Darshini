@@ -34,6 +34,7 @@ import com.streamvault.app.ui.theme.SurfaceElevated
 import com.streamvault.app.ui.theme.SurfaceHighlight
 import com.streamvault.app.ui.interaction.mouseClickable
 import com.streamvault.app.ui.interaction.rememberTvInteractionSounds
+import com.streamvault.app.ui.interaction.TvClickableSurface
 
 data class SelectionChip(
     val key: String,
@@ -99,7 +100,7 @@ fun ChipRowSection(
                 val isSelected = chip.key == selectedKey
                 var wasFocused by remember(chip.key) { mutableStateOf(false) }
                 val focusRequester = remember(chip.key) { FocusRequester() }
-                Surface(
+                TvClickableSurface(
                     onClick = {
                         sounds.playSelect()
                         chip.onClick()
@@ -132,7 +133,8 @@ fun ChipRowSection(
                             shape = RoundedCornerShape(999.dp)
                         )
                     ),
-                    scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+                    scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+                    cornerRadius = 24.dp
                 ) {
                     Column(
                         modifier = Modifier.padding(horizontal = chipHorizontalPadding.dp, vertical = 10.dp),
@@ -140,7 +142,7 @@ fun ChipRowSection(
                     ) {
                         Text(
                             text = chip.label,
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.titleMedium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )

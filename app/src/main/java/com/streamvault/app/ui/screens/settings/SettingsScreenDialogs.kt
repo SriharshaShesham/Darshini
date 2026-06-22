@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -185,9 +186,17 @@ internal fun SettingsScreenDialogs(
                 ContentType.SERIES -> "Series Custom Order"
                 else -> "Custom Order"
             }
+            val currentPriorityFlow = remember(uiState.activeProviderId, contentType) {
+                if (uiState.activeProviderId != null) {
+                    viewModel.getCategoryLanguagePriorityFlow(uiState.activeProviderId, contentType)
+                } else {
+                    kotlinx.coroutines.flow.flowOf(emptyList())
+                }
+            }
+            val currentPriority by currentPriorityFlow.collectAsState(initial = emptyList())
             CategoryLanguagePriorityDialog(
                 title = title,
-                currentPriority = uiState.categoryLanguagePriority,
+                currentPriority = currentPriority,
                 availableCategories = categories,
                 hiddenIds = hiddenIds,
                 onToggleVisibility = { categoryId ->
@@ -195,7 +204,7 @@ internal fun SettingsScreenDialogs(
                 },
                 onDismiss = { dialogState.showCategoryLanguagePriorityDialogType = null },
                 onSave = { priority ->
-                    viewModel.setCategoryLanguagePriority(priority)
+                    viewModel.setCategoryLanguagePriority(contentType, priority)
                     dialogState.showCategoryLanguagePriorityDialogType = null
                 }
             )
@@ -262,6 +271,8 @@ internal fun SettingsScreenDialogs(
         onShowEthernetQualityDialogChange = { dialogState.showEthernetQualityDialog = it },
         showLanguageDialog = dialogState.showLanguageDialog,
         onShowLanguageDialogChange = { dialogState.showLanguageDialog = it },
+        showThemeDialog = dialogState.showThemeDialog,
+        onShowThemeDialogChange = { dialogState.showThemeDialog = it },
         categorySortDialogType = dialogState.categorySortDialogType,
         onCategorySortDialogTypeChange = { dialogState.categorySortDialogType = it },
         onShowCategoryLanguagePriorityDialogTypeChange = { dialogState.showCategoryLanguagePriorityDialogType = it },

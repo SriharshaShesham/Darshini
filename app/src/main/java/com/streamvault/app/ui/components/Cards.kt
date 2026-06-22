@@ -81,6 +81,7 @@ import com.streamvault.domain.model.Series
 import com.streamvault.app.ui.design.FocusSpec
 import com.streamvault.app.ui.interaction.mouseClickable
 import com.streamvault.app.ui.interaction.rememberTvInteractionSounds
+import com.streamvault.app.ui.interaction.TvClickableSurface
 
 private object ChannelProgressTicker {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -124,7 +125,7 @@ fun FocusableCard(
         label = "cardScale"
     )
 
-    Surface(
+    TvClickableSurface(
         onClick = {
             sounds.playSelect()
             onClick()
@@ -177,7 +178,8 @@ fun FocusableCard(
                 ),
                 shape = RoundedCornerShape(12.dp)
             )
-        )
+        ),
+        cornerRadius = 12.dp
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             content(isFocused)

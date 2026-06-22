@@ -49,6 +49,15 @@ internal fun SettingsContentPane(
         userScrollEnabled = !uiState.isSyncing
     ) {
         if (dialogState.selectedCategory == 0) {
+            settingsUiSection(
+                uiState = uiState,
+                viewModel = viewModel,
+                context = context,
+                appThemeLabel = screenLabels.appThemeLabel,
+                onShowThemeDialogChange = { dialogState.showThemeDialog = it },
+                onCategorySortDialogTypeChange = { dialogState.categorySortDialogType = it }
+            )
+        } else if (dialogState.selectedCategory == 1) {
             providerSection(
                 uiState = uiState,
                 onAddProvider = onAddProvider,
@@ -58,7 +67,7 @@ internal fun SettingsContentPane(
                 viewModel = viewModel,
                 providerState = providerState
             )
-        } else if (dialogState.selectedCategory == 1) {
+        } else if (dialogState.selectedCategory == 2) {
             settingsPlaybackSection(
                 uiState = uiState,
                 viewModel = viewModel,
@@ -110,40 +119,42 @@ internal fun SettingsContentPane(
                 onShowWifiQualityDialogChange = { dialogState.showWifiQualityDialog = it },
                 onShowEthernetQualityDialogChange = { dialogState.showEthernetQualityDialog = it }
             )
-        } else if (dialogState.selectedCategory == 2) {
-    settingsBrowsingSection(
-        uiState = uiState,
-        viewModel = viewModel,
-        context = context,
-        appLandingDestinationLabel = screenLabels.appLandingDestinationLabel,
-        topNavigationSummaryLabel = screenLabels.topNavigationSummaryLabel,
-        homeDashboardSummaryLabel = screenLabels.homeDashboardSummaryLabel,
-        guideDefaultCategoryLabel = screenLabels.guideDefaultCategoryLabel,
-        timeFormatLabel = screenLabels.timeFormatLabel,
-        appLanguageLabel = screenLabels.appLanguageLabel,
+        } else if (dialogState.selectedCategory == 3) {
+            settingsBrowsingSection(
+                uiState = uiState,
+                viewModel = viewModel,
+                context = context,
+                appLandingDestinationLabel = screenLabels.appLandingDestinationLabel,
+                topNavigationSummaryLabel = screenLabels.topNavigationSummaryLabel,
+                homeDashboardSummaryLabel = screenLabels.homeDashboardSummaryLabel,
+                guideDefaultCategoryLabel = screenLabels.guideDefaultCategoryLabel,
+                timeFormatLabel = screenLabels.timeFormatLabel,
+                appLanguageLabel = screenLabels.appLanguageLabel,
+                appThemeLabel = screenLabels.appThemeLabel,
                 onShowLiveTvModeDialogChange = { dialogState.showLiveTvModeDialog = it },
                 onShowLiveTvFiltersDialogChange = { dialogState.showLiveTvFiltersDialog = it },
                 onShowLiveTvQuickFilterVisibilityDialogChange = { dialogState.showLiveTvQuickFilterVisibilityDialog = it },
                 onShowLiveChannelNumberingDialogChange = { dialogState.showLiveChannelNumberingDialog = it },
-        onShowLiveChannelGroupingDialogChange = { dialogState.showLiveChannelGroupingDialog = it },
-        onShowGroupedChannelLabelDialogChange = { dialogState.showGroupedChannelLabelDialog = it },
-        onShowLiveVariantPreferenceDialogChange = { dialogState.showLiveVariantPreferenceDialog = it },
-        onShowTopNavigationDialogChange = { dialogState.showTopNavigationDialog = it },
-        onShowCategoryLanguagePriorityDialogTypeChange = { dialogState.showCategoryLanguagePriorityDialogType = it },
-        onShowHomeDashboardDialogChange = { dialogState.showHomeDashboardDialog = it },
-        onShowLandingScreenDialogChange = { dialogState.showLandingScreenDialog = it },
-        onShowGuideDefaultCategoryDialogChange = { dialogState.showGuideDefaultCategoryDialog = it },
-        onShowTimeFormatDialogChange = { dialogState.showTimeFormatDialog = it },
+                onShowLiveChannelGroupingDialogChange = { dialogState.showLiveChannelGroupingDialog = it },
+                onShowGroupedChannelLabelDialogChange = { dialogState.showGroupedChannelLabelDialog = it },
+                onShowLiveVariantPreferenceDialogChange = { dialogState.showLiveVariantPreferenceDialog = it },
+                onShowTopNavigationDialogChange = { dialogState.showTopNavigationDialog = it },
+                onShowCategoryLanguagePriorityDialogTypeChange = { dialogState.showCategoryLanguagePriorityDialogType = it },
+                onShowHomeDashboardDialogChange = { dialogState.showHomeDashboardDialog = it },
+                onShowLandingScreenDialogChange = { dialogState.showLandingScreenDialog = it },
+                onShowGuideDefaultCategoryDialogChange = { dialogState.showGuideDefaultCategoryDialog = it },
+                onShowTimeFormatDialogChange = { dialogState.showTimeFormatDialog = it },
                 onShowVodViewModeDialogChange = { dialogState.showVodViewModeDialog = it },
                 onShowVodDuplicateHandlingDialogChange = { dialogState.showVodDuplicateHandlingDialog = it },
                 onShowVodVariantPreferenceDialogChange = { dialogState.showVodVariantPreferenceDialog = it },
                 onCategorySortDialogTypeChange = { dialogState.categorySortDialogType = it },
                 onShowLanguageDialogChange = { dialogState.showLanguageDialog = it },
+                onShowThemeDialogChange = { dialogState.showThemeDialog = it },
                 onRemoteShortcutDialogTargetChange = {
                     dialogState.selectedRemoteShortcutTargetKey = it?.storageKey()
                 }
             )
-        } else if (dialogState.selectedCategory == 3) {
+        } else if (dialogState.selectedCategory == 4) {
             settingsPrivacySection(
                 uiState = uiState,
                 viewModel = viewModel,
@@ -153,7 +164,7 @@ internal fun SettingsContentPane(
                 onShowLevelDialogChange = { dialogState.showLevelDialog = it },
                 onShowClearHistoryDialogChange = { dialogState.showClearHistoryDialog = it }
             )
-        } else if (dialogState.selectedCategory == 4) {
+        } else if (dialogState.selectedCategory == 5) {
             settingsRecordingSection(
                 uiState = uiState,
                 viewModel = viewModel,
@@ -165,7 +176,7 @@ internal fun SettingsContentPane(
                 onShowRecordingPaddingDialogChange = { dialogState.showRecordingPaddingDialog = it },
                 onShowRecordingBrowserDialogChange = { dialogState.showRecordingBrowserDialog = it }
             )
-        } else if (dialogState.selectedCategory == 5) {
+        } else if (dialogState.selectedCategory == 6) {
             settingsBackupSection(
                 onCreateBackup = onCreateBackup,
                 onShareBackup = onShareBackup,
@@ -180,12 +191,12 @@ internal fun SettingsContentPane(
                 onPush = onDrivePush,
                 onPull = onDrivePull
             )
-        } else if (dialogState.selectedCategory == 6) {
+        } else if (dialogState.selectedCategory == 7) {
             epgSourcesSection(
                 uiState = uiState,
                 viewModel = viewModel
             )
-        } else if (dialogState.selectedCategory == 7) {
+        } else if (dialogState.selectedCategory == 8) {
             settingsAboutSection(
                 uiState = uiState,
                 context = context,

@@ -232,7 +232,7 @@ class ProviderRepositoryImpl @Inject constructor(
                         httpHeaders = httpHeaders,
                         epgSyncMode = epgSyncMode,
                         xtreamLiveSyncMode = xtreamLiveSyncMode,
-                        xtreamFastSyncEnabled = false,
+                        xtreamFastSyncEnabled = xtreamFastSyncEnabled,
                         isActive = false,
                         status = ProviderStatus.PARTIAL,
                         lastSyncedAt = 0,
@@ -247,7 +247,7 @@ class ProviderRepositoryImpl @Inject constructor(
                         httpHeaders = httpHeaders,
                         epgSyncMode = epgSyncMode,
                         xtreamLiveSyncMode = xtreamLiveSyncMode,
-                        xtreamFastSyncEnabled = false,
+                        xtreamFastSyncEnabled = xtreamFastSyncEnabled,
                         isActive = false,
                         status = ProviderStatus.PARTIAL
                     )

@@ -27,6 +27,7 @@ import com.streamvault.app.ui.theme.Primary
 import com.streamvault.app.ui.theme.SurfaceElevated
 import com.streamvault.app.ui.theme.SurfaceHighlight
 import com.streamvault.app.ui.interaction.mouseClickable
+import com.streamvault.app.ui.interaction.TvClickableSurface
 
 // ── Netflix-style horizontal category row ─────────────────────────
 
@@ -57,7 +58,7 @@ fun <T : Any> CategoryRow(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 AppSectionHeader(title = title)
-                Surface(
+                TvClickableSurface(
                     onClick = onSeeAll,
                     modifier = Modifier
                         .focusRequester(seeAllFocusRequester)
@@ -77,7 +78,8 @@ fun <T : Any> CategoryRow(
                             border = BorderStroke(2.dp, FocusBorder),
                             shape = RoundedCornerShape(999.dp)
                         )
-                    )
+                    ),
+                    cornerRadius = 999.dp
                 ) {
                     Text(
                         text = stringResource(R.string.category_see_all),

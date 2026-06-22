@@ -466,11 +466,14 @@ private fun PosterCard(
     var imageLoaded by remember(imageUrl) { mutableStateOf(false) }
     var imageFailed by remember(imageUrl) { mutableStateOf(false) }
     val showFallback = imageUrl.isNullOrBlank() || imageFailed || !imageLoaded
+    val colorsPalette = com.streamvault.app.ui.design.LocalAppColors.current
+    val isGlass = colorsPalette == com.streamvault.app.ui.design.GlassLightAppColors || colorsPalette == com.streamvault.app.ui.design.GlassDarkAppColors
+    val backgroundContainerColor = if (isGlass) Color.Transparent else AppColors.SurfaceEmphasis
 
     Box(
         modifier = modifier
             .clip(posterShape)
-            .background(AppColors.SurfaceEmphasis)
+            .background(backgroundContainerColor)
     ) {
         // Fallback letter: only shown while no URL, still loading, or load failed
         if (showFallback) {
