@@ -857,8 +857,8 @@ fun AppNavigation(mainActivity: MainActivity) {
                     episodeId = safePlayerRequest.episodeId,
                     onBack = {
                         val route = safePlayerRequest.returnRoute
-                        if (!route.isNullOrBlank() && navController.popBackStack(route, false)) {
-                            // Popped back to the exact route already in the backstack (same VM, handoff works)
+                        if (navController.popBackStack()) {
+                            // Popped back successfully to the previous screen (e.g. MovieDetailScreen)
                             Unit
                         } else if (!route.isNullOrBlank()) {
                             // Nothing left to pop — navigate to the return route or home as a last resort
@@ -867,14 +867,13 @@ fun AppNavigation(mainActivity: MainActivity) {
                                 launchSingleTop = true
                                 restoreState = true
                             }
-                        } else if (!navController.popBackStack()) {
+                        } else {
                             navController.navigate(Routes.HOME) {
                                 popUpTo(Routes.PLAYER) { inclusive = true }
                                 launchSingleTop = true
                                 restoreState = true
                             }
                         }
-                        // else: plain popBackStack() succeeded — returns to existing Guide entry, preserving EpgViewModel
                     },
                     onNavigate = { route ->
                         navController.navigateIfResumed(route) {
