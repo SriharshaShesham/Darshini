@@ -120,7 +120,7 @@ fun DashboardScreen(
             currentRoute = currentRoute,
             onNavigate = onNavigate,
             title = stringResource(R.string.nav_home),
-            subtitle = provider?.name,
+            subtitle = null,
             navigationChrome = AppNavigationChrome.TopBar,
             compactHeader = true,
             showScreenHeader = false

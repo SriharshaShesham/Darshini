@@ -237,6 +237,21 @@ fun SearchInput(
                                     textFieldValue = textFieldValue.copy(selection = TextRange(nextCursor))
                                     true
                                 }
+                                android.view.KeyEvent.KEYCODE_ENTER,
+                                android.view.KeyEvent.KEYCODE_NUMPAD_ENTER,
+                                android.view.KeyEvent.KEYCODE_DPAD_CENTER -> {
+                                    if (triggerOnSubmitOnly) {
+                                        onValueChange(textFieldValue.text)
+                                        onSearch()
+                                        acceptsInput = false
+                                        keyboardController?.hide()
+                                        val movedFocus = focusManager.moveFocus(FocusDirection.Down)
+                                        if (!movedFocus) focusRequester.requestFocus()
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
                                 else -> false
                             }
                         },
