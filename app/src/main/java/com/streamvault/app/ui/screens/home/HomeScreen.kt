@@ -746,6 +746,7 @@ fun HomeScreen(
                                 },
                                 placeholder = stringResource(R.string.home_search_categories),
                                 focusRequester = categorySearchFocusRequester,
+                                triggerOnSubmitOnly = true,
                                 modifier = Modifier.padding(bottom = 10.dp),
                                 enabled = !isReorderMode
                             )
@@ -1067,6 +1068,7 @@ fun HomeScreen(
                                 placeholder = stringResource(R.string.home_search_channels),
                                 onSearch = {},
                                 focusRequester = channelSearchFocusRequester,
+                                triggerOnSubmitOnly = true,
                                 modifier = Modifier.width(channelSearchWidth),
                                 enabled = !isReorderMode
                             )

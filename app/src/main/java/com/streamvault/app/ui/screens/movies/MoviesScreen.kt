@@ -847,6 +847,7 @@ private fun MoviesVodContent(
                         placeholder = stringResource(R.string.movies_search_placeholder),
                         onSearch = {},
                         focusRequester = initialFocusRequester,
+                        triggerOnSubmitOnly = true,
                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                     )
                 }
