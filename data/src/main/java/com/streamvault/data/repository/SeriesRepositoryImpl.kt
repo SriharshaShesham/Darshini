@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -1386,22 +1387,23 @@ class SeriesRepositoryImpl @Inject constructor(
             .any { value -> value.lowercase().contains(normalizedQuery) }
     }
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private fun safeSeriesSearchFlow(
         source: Flow<List<SeriesBrowseEntity>>,
         fallback: () -> Flow<List<SeriesBrowseEntity>>,
         rawQuery: String
-    ): Flow<List<SeriesBrowseEntity>> = flow {
-        try {
-            source.collect { ftsRows ->
-                if (ftsRows.isEmpty()) {
-                    emit(emptyList())
-                } else {
-                    emit(ftsRows)
-                }
-            }
-        } catch (error: SQLiteException) {
+    ): Flow<List<SeriesBrowseEntity>> = source.flatMapLatest { ftsRows ->
+        if (ftsRows.isEmpty()) {
+            fallback()
+        } else {
+            flowOf(ftsRows)
+        }
+    }.catch { error ->
+        if (error is SQLiteException) {
             Log.w(TAG, "FTS series search failed for queryLength=${rawQuery.length}; using LIKE-only search", error)
             emitAll(fallback())
+        } else {
+            throw error
         }
     }
 

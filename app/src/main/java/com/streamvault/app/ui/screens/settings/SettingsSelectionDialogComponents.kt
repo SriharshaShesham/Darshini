@@ -28,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import com.streamvault.app.ui.interaction.mouseClickable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -78,9 +80,10 @@ internal fun PremiumSelectionDialog(
                     Column(
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier
-                            .padding(top = 6.dp)
                             .weight(1f, fill = false)
+                            .padding(vertical = 8.dp)
                             .verticalScroll(rememberScrollState())
+                            .padding(vertical = 8.dp)
                     ) {
                         content()
                     }
@@ -90,18 +93,23 @@ internal fun PremiumSelectionDialog(
                             .padding(top = 8.dp),
                         horizontalArrangement = Arrangement.End
                     ) {
+                        val cancelInteractionSource = remember { MutableInteractionSource() }
+                        val isCancelFocused by cancelInteractionSource.collectIsFocusedAsState()
+                        val colorsPalette = com.streamvault.app.ui.design.LocalAppColors.current
                         TvClickableSurface(
                             onClick = { if (canInteract) onDismiss() },
-                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(6.dp)),
+                            cornerRadius = 6.dp,
                             colors = ClickableSurfaceDefaults.colors(
                                 containerColor = Primary.copy(alpha = 0.2f),
                                 focusedContainerColor = Primary.copy(alpha = 0.4f)
-                            )
+                            ),
+                            interactionSource = cancelInteractionSource,
+                            modifier = Modifier
                         ) {
                             Text(
                                 text = stringResource(R.string.settings_cancel),
                                 style = MaterialTheme.typography.labelMedium,
-                                color = Primary,
+                                color = if (isCancelFocused) colorsPalette.textPrimary else Primary,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
                             )
                         }
@@ -137,10 +145,14 @@ internal fun LevelOption(
     onSelect: () -> Unit
 ) {
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val colorsPalette = com.streamvault.app.ui.design.LocalAppColors.current
+    val isSelected = level == currentLevel
     TvClickableSurface(
         onClick = onSelect,
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
         cornerRadius = 8.dp,
+        interactionSource = interactionSource,
         modifier = Modifier
             .fillMaxWidth()
             .focusRequester(focusRequester)
@@ -153,17 +165,30 @@ internal fun LevelOption(
             verticalAlignment = Alignment.CenterVertically
         ) {
             RadioButton(
-                selected = level == currentLevel,
-                onClick = null
+                selected = isSelected,
+                onClick = null,
+                colors = androidx.compose.material3.RadioButtonDefaults.colors(
+                    selectedColor = Primary,
+                    unselectedColor = colorsPalette.textSecondary
+                )
             )
             Spacer(modifier = Modifier.width(12.dp))
+            val titleColor = when {
+                isFocused -> colorsPalette.textPrimary
+                isSelected -> Primary
+                else -> colorsPalette.textSecondary
+            }
+            val descColor = when {
+                isFocused -> colorsPalette.textSecondary
+                else -> colorsPalette.textTertiary
+            }
             if (subtitle != null) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(text, style = MaterialTheme.typography.titleSmall, color = OnBackground)
-                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = OnSurfaceDim)
+                    Text(text, style = MaterialTheme.typography.titleSmall, color = titleColor)
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = descColor)
                 }
             } else {
-                Text(text, style = MaterialTheme.typography.bodyMedium, color = OnBackground)
+                Text(text, style = MaterialTheme.typography.bodyMedium, color = titleColor)
             }
         }
     }

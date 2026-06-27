@@ -828,9 +828,10 @@ class SeriesRepositoryImplTest {
     }
 
     @Test
-    fun `searchSeries returns empty without like fallback when fts has no rows`() = runTest {
+    fun `searchSeries runs like fallback when fts has no rows`() = runTest {
         whenever(preferencesRepository.parentalControlLevel).thenReturn(flowOf(0))
         whenever(seriesDao.search(eq(7L), any(), any())).thenReturn(flowOf(emptyList()))
+        whenever(seriesDao.searchFallback(eq(7L), any(), any())).thenReturn(flowOf(emptyList()))
         whenever(favoriteDao.getAllByType(7L, ContentType.SERIES.name)).thenReturn(flowOf(emptyList()))
 
         val repository = createRepository()
@@ -838,7 +839,7 @@ class SeriesRepositoryImplTest {
         val result = repository.searchSeries(7L, "drama").first()
 
         assertThat(result).isEmpty()
-        verify(seriesDao, never()).searchFallback(eq(7L), any(), any())
+        verify(seriesDao).searchFallback(eq(7L), any(), any())
     }
 
     @Test

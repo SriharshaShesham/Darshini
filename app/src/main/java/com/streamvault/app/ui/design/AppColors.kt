@@ -75,7 +75,7 @@ val LightAppColors = AppColorPalette(
     brand = Color(0xFF1A56B0),
     brandMuted = Color(0x221A56B0),
     brandStrong = Color(0xFF0D3D82),
-    focus = Color(0xFF1A56B0),
+    focus = Color(0xFF1C2733),
 
     textPrimary = Color(0xFF1C2733),
     textSecondary = Color(0xFF4C5E75),
@@ -120,8 +120,8 @@ val GlassDarkAppColors = AppColorPalette(
     divider = Color(0x1CFFFFFF),
     outline = Color(0x338BBCFF),
 
-    heroTop = Color(0x4D070F18),
-    heroBottom = Color(0x99070F18)
+    heroTop = Color(0x80070F18),
+    heroBottom = Color(0xE6070F18)
 )
 
 val GlassLightAppColors = AppColorPalette(
@@ -135,7 +135,7 @@ val GlassLightAppColors = AppColorPalette(
     brand = Color(0xFF1A56B0),
     brandMuted = Color(0x221A56B0),
     brandStrong = Color(0xFF0D3D82),
-    focus = Color(0xFF1A56B0),
+    focus = Color(0xFF1C2733),
 
     textPrimary = Color(0xFF1C2733),
     textSecondary = Color(0xFF4C5E75),
@@ -150,8 +150,8 @@ val GlassLightAppColors = AppColorPalette(
     divider = Color(0x1F1C2733),
     outline = Color(0x331A56B0),
 
-    heroTop = Color(0x4DE2E7F0),
-    heroBottom = Color(0x99E2E7F0)
+    heroTop = Color(0x80E2E7F0),
+    heroBottom = Color(0xE6E2E7F0)
 )
 
 val LocalAppColors = staticCompositionLocalOf { GlassDarkAppColors }

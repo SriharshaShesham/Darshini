@@ -437,12 +437,10 @@ private fun SeriesVodContent(
             }
             .toList()
     }
-    val fallbackSeriesId = if (heroSeries == null) {
-        favoriteSeries.firstOrNull()?.id
-            ?: freshSeries.firstOrNull()?.id
-            ?: topRatedSeries.firstOrNull()?.id
-            ?: catEntries.firstOrNull()?.value?.firstOrNull()?.id
-    } else null
+    val fallbackSeriesId = favoriteSeries.firstOrNull()?.id
+        ?: freshSeries.firstOrNull()?.id
+        ?: topRatedSeries.firstOrNull()?.id
+        ?: catEntries.firstOrNull()?.value?.firstOrNull()?.id
     val categoryOptions = remember(visibleCategoryNames, uiState.categoryCounts, categoryByName, uiState.parentalControlLevel, uiState.unlockedCategoryIds) {
         visibleCategoryNames.map { name ->
             val matchedCategory = categoryByName[name]
@@ -624,7 +622,18 @@ private fun SeriesVodContent(
                 }
             }
             if (uiState.searchQuery.isNotBlank()) {
-                if (allMatchedSeries.isNotEmpty()) {
+                if (uiState.isLoadingPreviewRows) {
+                    item(key = "search_loading") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(loadingSectionHeight),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = Color.White)
+                        }
+                    }
+                } else if (allMatchedSeries.isNotEmpty()) {
                     item(key = "search_results_title") {
                         Text(
                             text = stringResource(R.string.search_title),
@@ -650,6 +659,20 @@ private fun SeriesVodContent(
                                     onLongClick = { onShowDialog(series) }
                                 )
                             }
+                        }
+                    }
+                } else {
+                    item(key = "search_no_results") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(loadingSectionHeight),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.series_no_found_subtitle),
+                                color = Color.White.copy(alpha = 0.6f)
+                            )
                         }
                     }
                 }
@@ -830,6 +853,7 @@ private fun SeriesVodContent(
                         placeholder = stringResource(R.string.series_search_placeholder),
                         onSearch = {},
                         focusRequester = initialFocusRequester,
+                        triggerOnSubmitOnly = true,
                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                     )
                 }
@@ -1153,6 +1177,7 @@ private fun SeriesVodClassicContent(
                     placeholder = stringResource(R.string.series_search_placeholder),
                     onSearch = {},
                     focusRequester = initialFocusRequester,
+                    triggerOnSubmitOnly = true,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

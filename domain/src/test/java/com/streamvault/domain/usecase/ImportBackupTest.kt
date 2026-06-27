@@ -147,6 +147,8 @@ private class FakeImportBackupManager(
 
     override suspend fun exportConfig(uriString: String): Result<Unit> = error("Not used in test")
 
+    override suspend fun exportProvider(providerId: Long, uriString: String): Result<Unit> = error("Not used in test")
+
     override suspend fun inspectBackup(uriString: String): Result<BackupPreview> {
         lastInspectUri = uriString
         return inspectResult

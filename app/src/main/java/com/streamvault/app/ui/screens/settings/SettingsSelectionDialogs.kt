@@ -9,6 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -71,28 +74,42 @@ internal fun CategorySortModeDialog(
                     listOf(CategorySortMode.CUSTOM) + CategorySortMode.entries.filter { it != CategorySortMode.CUSTOM }
                 }
                 sortedModes.forEach { mode ->
+                    val interactionSource = remember { MutableInteractionSource() }
+                    val isFocused by interactionSource.collectIsFocusedAsState()
+                    val colorsPalette = com.streamvault.app.ui.design.LocalAppColors.current
+                    val isSelected = mode == currentMode
                     TvClickableSurface(
                         onClick = { onModeSelected(mode) },
-                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(14.dp)),
+                        cornerRadius = 14.dp,
                         colors = ClickableSurfaceDefaults.colors(
-                            containerColor = if (mode == currentMode) Primary.copy(alpha = 0.18f) else SurfaceElevated,
+                            containerColor = if (isSelected) Primary.copy(alpha = 0.18f) else SurfaceElevated,
                             focusedContainerColor = Primary.copy(alpha = 0.28f)
                         ),
+                        interactionSource = interactionSource,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                            modifier = Modifier.padding(start = 24.dp, end = 16.dp, top = 14.dp, bottom = 14.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
+                            val titleColor = when {
+                                isFocused -> colorsPalette.textPrimary
+                                isSelected -> Primary
+                                else -> colorsPalette.textSecondary
+                            }
+                            val descColor = when {
+                                isFocused -> colorsPalette.textSecondary
+                                else -> colorsPalette.textTertiary
+                            }
                             Text(
                                 text = formatCategorySortModeLabel(mode, context),
                                 style = MaterialTheme.typography.titleSmall,
-                                color = if (mode == currentMode) Primary else OnBackground
+                                color = titleColor
                             )
                             Text(
-                                text = sortModeLabel(mode, context),
+                                text = sortModeDescription(mode, context),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = OnSurfaceDim
+                                color = descColor
                             )
                         }
                     }

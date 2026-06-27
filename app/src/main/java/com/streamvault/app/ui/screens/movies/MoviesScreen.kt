@@ -439,12 +439,10 @@ private fun MoviesVodContent(
             }
             .toList()
     }
-    val fallbackMovieId = if (heroMovie == null) {
-        favoriteMovies.firstOrNull()?.id
-            ?: freshMovies.firstOrNull()?.id
-            ?: topRatedMovies.firstOrNull()?.id
-            ?: catEntries.firstOrNull()?.value?.firstOrNull()?.id
-    } else null
+    val fallbackMovieId = favoriteMovies.firstOrNull()?.id
+        ?: freshMovies.firstOrNull()?.id
+        ?: topRatedMovies.firstOrNull()?.id
+        ?: catEntries.firstOrNull()?.value?.firstOrNull()?.id
     val categoryOptions = remember(visibleCategoryNames, uiState.categoryCounts, categoryByName, uiState.parentalControlLevel, uiState.unlockedCategoryIds) {
         visibleCategoryNames.map { name ->
             val matchedCategory = categoryByName[name]
@@ -617,7 +615,18 @@ private fun MoviesVodContent(
                 }
             }
             if (uiState.searchQuery.isNotBlank()) {
-                if (allMatchedMovies.isNotEmpty()) {
+                if (uiState.isLoadingPreviewRows) {
+                    item(key = "search_loading") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(loadingSectionHeight),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = Color.White)
+                        }
+                    }
+                } else if (allMatchedMovies.isNotEmpty()) {
                     item(key = "search_results_title") {
                         Text(
                             text = stringResource(R.string.search_title),
@@ -643,6 +652,20 @@ private fun MoviesVodContent(
                                     onLongClick = { onShowDialog(movie) }
                                 )
                             }
+                        }
+                    }
+                } else {
+                    item(key = "search_no_results") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(loadingSectionHeight),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.movies_no_found_subtitle),
+                                color = Color.White.copy(alpha = 0.6f)
+                            )
                         }
                     }
                 }
@@ -1146,6 +1169,7 @@ private fun MoviesVodClassicContent(
                     placeholder = stringResource(R.string.movies_search_placeholder),
                     onSearch = {},
                     focusRequester = initialFocusRequester,
+                    triggerOnSubmitOnly = true,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

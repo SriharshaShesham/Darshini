@@ -51,7 +51,7 @@ fun ContinueWatchingRow(
 ) {
     if (items.isEmpty()) return
 
-    Column(modifier = modifier.fillMaxWidth().suppressParentVerticalScroll()) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

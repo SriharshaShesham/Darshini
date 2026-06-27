@@ -48,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -299,33 +300,34 @@ private fun MovieDetailContent(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(relatedContent, key = { it.id }) { related ->
-                            TvClickableSurface(
-                                onClick = { onRelatedClick(related) },
-                                modifier = Modifier.width(120.dp)
+                            Column(
+                                modifier = Modifier.width(120.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Box(
+                                TvClickableSurface(
+                                    onClick = { onRelatedClick(related) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(2f / 3f),
+                                    shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
+                                    cornerRadius = 12.dp
+                                ) {
+                                    AsyncImage(
+                                        model = rememberCrossfadeImageModel(related.posterUrl ?: related.backdropUrl),
+                                        contentDescription = related.name,
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .aspectRatio(2f / 3f)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(AppColors.SurfaceElevated)
-                                    ) {
-                                        AsyncImage(
-                                            model = rememberCrossfadeImageModel(related.posterUrl ?: related.backdropUrl),
-                                            contentDescription = related.name,
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    }
-                                    Text(
-                                        text = related.name,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = AppColors.TextPrimary,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(12.dp)),
+                                        contentScale = ContentScale.Crop
                                     )
                                 }
+                                Text(
+                                    text = related.name,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = AppColors.TextPrimary,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
                     }
@@ -426,7 +428,9 @@ private fun MovieDetailHeroText(
                 modifier = Modifier.focusRequester(playButtonFocusRequester),
                 colors = ButtonDefaults.colors(
                     containerColor = AppColors.Brand,
-                    contentColor = Color.White
+                    contentColor = Color.White,
+                    focusedContainerColor = AppColors.Focus,
+                    focusedContentColor = AppColors.Canvas
                 )
             ) {
                 Text(
@@ -441,7 +445,9 @@ private fun MovieDetailHeroText(
                 onClick = onCopyUrl,
                 colors = ButtonDefaults.colors(
                     containerColor = AppColors.SurfaceEmphasis,
-                    contentColor = AppColors.TextPrimary
+                    contentColor = AppColors.TextPrimary,
+                    focusedContainerColor = AppColors.Focus,
+                    focusedContentColor = AppColors.Canvas
                 )
             ) {
                 Text(stringResource(R.string.stream_url_copy))
@@ -450,7 +456,9 @@ private fun MovieDetailHeroText(
                 onClick = onDownload,
                 colors = ButtonDefaults.colors(
                     containerColor = AppColors.SurfaceEmphasis,
-                    contentColor = AppColors.TextPrimary
+                    contentColor = AppColors.TextPrimary,
+                    focusedContainerColor = AppColors.Focus,
+                    focusedContentColor = AppColors.Canvas
                 )
             ) {
                 Text(stringResource(R.string.download_button_label))
@@ -460,7 +468,9 @@ private fun MovieDetailHeroText(
                     onClick = onPlayTrailer,
                     colors = ButtonDefaults.colors(
                         containerColor = AppColors.SurfaceEmphasis,
-                        contentColor = AppColors.TextPrimary
+                        contentColor = AppColors.TextPrimary,
+                        focusedContainerColor = AppColors.Focus,
+                        focusedContentColor = AppColors.Canvas
                     )
                 ) {
                     Text(stringResource(R.string.movie_detail_trailer))
@@ -470,7 +480,9 @@ private fun MovieDetailHeroText(
                 onClick = onToggleFavorite,
                 colors = ButtonDefaults.colors(
                     containerColor = if (movie.isFavorite) AppColors.Brand else AppColors.SurfaceEmphasis,
-                    contentColor = if (movie.isFavorite) Color.White else AppColors.TextSecondary
+                    contentColor = if (movie.isFavorite) Color.White else AppColors.TextSecondary,
+                    focusedContainerColor = AppColors.Focus,
+                    focusedContentColor = AppColors.Canvas
                 )
             ) {
                 Icon(
@@ -486,7 +498,7 @@ private fun MovieDetailHeroText(
             text = movie.plot?.ifBlank { stringResource(R.string.movie_plot_fallback) }
                 ?: stringResource(R.string.movie_plot_fallback),
             style = MaterialTheme.typography.bodyLarge,
-            color = AppColors.TextSecondary,
+            color = AppColors.TextPrimary,
             maxLines = 6,
             overflow = TextOverflow.Ellipsis
         )
@@ -513,7 +525,9 @@ private fun MovieVersionSelector(
                     onClick = { onSelectVariant(variant.rawMovieId) },
                     colors = ButtonDefaults.colors(
                         containerColor = if (selected) AppColors.Brand else AppColors.SurfaceEmphasis,
-                        contentColor = if (selected) Color.White else AppColors.TextPrimary
+                        contentColor = if (selected) Color.White else AppColors.TextPrimary,
+                        focusedContainerColor = AppColors.Focus,
+                        focusedContentColor = AppColors.Canvas
                     )
                 ) {
                     Text(

@@ -58,6 +58,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collect
@@ -1391,22 +1392,23 @@ class MovieRepositoryImpl @Inject constructor(
             .any { value -> value.lowercase().contains(normalizedQuery) }
     }
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private fun safeMovieSearchFlow(
         source: Flow<List<MovieBrowseEntity>>,
         fallback: () -> Flow<List<MovieBrowseEntity>>,
         rawQuery: String
-    ): Flow<List<MovieBrowseEntity>> = flow {
-        try {
-            source.collect { ftsRows ->
-                if (ftsRows.isEmpty()) {
-                    emit(emptyList())
-                } else {
-                    emit(ftsRows)
-                }
-            }
-        } catch (error: SQLiteException) {
+    ): Flow<List<MovieBrowseEntity>> = source.flatMapLatest { ftsRows ->
+        if (ftsRows.isEmpty()) {
+            fallback()
+        } else {
+            flowOf(ftsRows)
+        }
+    }.catch { error ->
+        if (error is SQLiteException) {
             Log.w(TAG, "FTS movie search failed for queryLength=${rawQuery.length}; using LIKE-only search", error)
             emitAll(fallback())
+        } else {
+            throw error
         }
     }
 

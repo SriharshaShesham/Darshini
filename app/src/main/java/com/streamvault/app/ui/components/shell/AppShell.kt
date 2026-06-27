@@ -534,6 +534,7 @@ private fun TopNavigationBar(
                         value = searchQuery,
                         onValueChange = onSearchQueryChange,
                         placeholder = searchPlaceholder ?: stringResource(R.string.search_title),
+                        triggerOnSubmitOnly = true,
                         modifier = Modifier.width(200.dp)
                     )
                 }

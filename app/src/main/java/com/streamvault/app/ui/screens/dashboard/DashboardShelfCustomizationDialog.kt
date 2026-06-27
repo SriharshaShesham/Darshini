@@ -248,4 +248,5 @@ private fun AppHomeDashboardShelf.labelResId(): Int = when (this) {
     AppHomeDashboardShelf.CONTINUE_WATCHING_MOVIES -> R.string.dashboard_continue_watching_movies
     AppHomeDashboardShelf.CONTINUE_WATCHING_SERIES -> R.string.dashboard_continue_watching_series
     AppHomeDashboardShelf.RECOMMENDED_MOVIES -> R.string.dashboard_recommended_movies
+    AppHomeDashboardShelf.TOP_RATED_MOVIES -> R.string.dashboard_top_rated_movies
 }

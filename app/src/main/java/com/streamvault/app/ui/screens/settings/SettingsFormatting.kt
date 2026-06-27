@@ -224,6 +224,17 @@ internal fun sortModeLabel(mode: CategorySortMode, context: android.content.Cont
     }
 }
 
+internal fun sortModeDescription(mode: CategorySortMode, context: android.content.Context): String {
+    return when (mode) {
+        CategorySortMode.DEFAULT -> context.getString(R.string.settings_category_sort_default_desc)
+        CategorySortMode.TITLE_ASC -> context.getString(R.string.settings_category_sort_az_desc)
+        CategorySortMode.TITLE_DESC -> context.getString(R.string.settings_category_sort_za_desc)
+        CategorySortMode.COUNT_DESC -> context.getString(R.string.settings_category_sort_most_items_desc)
+        CategorySortMode.COUNT_ASC -> context.getString(R.string.settings_category_sort_least_items_desc)
+        CategorySortMode.CUSTOM -> context.getString(R.string.settings_category_sort_custom_desc)
+    }
+}
+
 internal fun formatCategorySortModeLabel(mode: CategorySortMode, context: android.content.Context): String {
     return sortModeLabel(mode, context)
 }

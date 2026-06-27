@@ -34,12 +34,14 @@ import androidx.tv.material3.ClickableSurfaceShape
 import androidx.tv.material3.IconButton
 import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.Surface
+import androidx.tv.material3.MaterialTheme
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.Alignment
 import com.streamvault.app.ui.design.LocalAppColors
+import com.streamvault.app.ui.design.AppColors
 import androidx.compose.foundation.layout.padding
 
 /**
@@ -53,14 +55,14 @@ fun TvClickableSurface(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    shape: ClickableSurfaceShape = ClickableSurfaceDefaults.shape(),
-    colors: ClickableSurfaceColors = ClickableSurfaceDefaults.colors(),
-    border: ClickableSurfaceBorder = ClickableSurfaceDefaults.border(),
+    cornerRadius: androidx.compose.ui.unit.Dp = 12.dp,
+    shape: ClickableSurfaceShape = ClickableSurfaceDefaults.shape(androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius)),
+    colors: ClickableSurfaceColors? = null,
+    border: ClickableSurfaceBorder? = null,
     scale: ClickableSurfaceScale = ClickableSurfaceDefaults.scale(),
     glow: ClickableSurfaceGlow = ClickableSurfaceDefaults.glow(),
     interactionSource: MutableInteractionSource? = null,
     onLongClick: (() -> Unit)? = null,
-    cornerRadius: androidx.compose.ui.unit.Dp = 12.dp,
     content: @Composable BoxScope.() -> Unit,
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -68,28 +70,52 @@ fun TvClickableSurface(
     val isLightGlass = colorsPalette == com.streamvault.app.ui.design.GlassLightAppColors
     val isGlass = colorsPalette == com.streamvault.app.ui.design.GlassLightAppColors || colorsPalette == com.streamvault.app.ui.design.GlassDarkAppColors
 
-    val resolvedColors = if (isGlass) {
-        ClickableSurfaceDefaults.colors(
-            containerColor = Color.Transparent,
-            focusedContainerColor = Color.Transparent,
-            pressedContainerColor = Color.Transparent,
-            disabledContainerColor = Color.Transparent,
-            contentColor = colors.contentColor,
-            focusedContentColor = colors.focusedContentColor,
-            pressedContentColor = colors.pressedContentColor,
-            disabledContentColor = colors.disabledContentColor
-        )
+    val resolvedColors = if (colors != null) {
+        if (isGlass) {
+            val defaultContentColor = colors.contentColor == Color.Unspecified || 
+                    colors.contentColor == MaterialTheme.colorScheme.onSurfaceVariant || 
+                    colors.contentColor == MaterialTheme.colorScheme.onSurface
+            val defaultFocusedContentColor = colors.focusedContentColor == Color.Unspecified || 
+                    colors.focusedContentColor == MaterialTheme.colorScheme.inverseOnSurface || 
+                    colors.focusedContentColor == MaterialTheme.colorScheme.onSurface
+
+            ClickableSurfaceDefaults.colors(
+                containerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                pressedContainerColor = Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+                contentColor = if (defaultContentColor) colorsPalette.textSecondary else colors.contentColor,
+                focusedContentColor = if (defaultFocusedContentColor) colorsPalette.textPrimary else colors.focusedContentColor,
+                pressedContentColor = if (defaultFocusedContentColor) colorsPalette.textPrimary else colors.pressedContentColor,
+                disabledContentColor = colors.disabledContentColor
+            )
+        } else {
+            colors
+        }
     } else {
-        ClickableSurfaceDefaults.colors(
-            containerColor = colorsPalette.surface,
-            focusedContainerColor = colorsPalette.surfaceAccent,
-            pressedContainerColor = colorsPalette.surfaceEmphasis,
-            disabledContainerColor = colorsPalette.surface.copy(alpha = 0.5f),
-            contentColor = colors.contentColor,
-            focusedContentColor = colors.focusedContentColor,
-            pressedContentColor = colors.pressedContentColor,
-            disabledContentColor = colors.disabledContentColor
-        )
+        if (isGlass) {
+            ClickableSurfaceDefaults.colors(
+                containerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                pressedContainerColor = Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+                contentColor = colorsPalette.textSecondary,
+                focusedContentColor = colorsPalette.textPrimary,
+                pressedContentColor = colorsPalette.textPrimary,
+                disabledContentColor = colorsPalette.textDisabled
+            )
+        } else {
+            ClickableSurfaceDefaults.colors(
+                containerColor = colorsPalette.surface,
+                focusedContainerColor = colorsPalette.surfaceAccent,
+                pressedContainerColor = colorsPalette.surfaceEmphasis,
+                disabledContainerColor = colorsPalette.surface.copy(alpha = 0.5f),
+                contentColor = colorsPalette.textSecondary,
+                focusedContentColor = colorsPalette.textPrimary,
+                pressedContentColor = colorsPalette.textPrimary,
+                disabledContentColor = colorsPalette.textDisabled
+            )
+        }
     }
 
     val resolvedBorder = if (isGlass) {
@@ -100,7 +126,20 @@ fun TvClickableSurface(
             disabledBorder = Border.None
         )
     } else {
-        border
+        border ?: ClickableSurfaceDefaults.border(
+            border = Border(
+                border = androidx.compose.foundation.BorderStroke(0.dp, Color.Transparent),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius)
+            ),
+            focusedBorder = Border(
+                border = androidx.compose.foundation.BorderStroke(com.streamvault.app.ui.design.FocusSpec.BorderWidth, colorsPalette.focus),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius)
+            ),
+            pressedBorder = Border(
+                border = androidx.compose.foundation.BorderStroke(com.streamvault.app.ui.design.FocusSpec.BorderWidth, colorsPalette.focus),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(cornerRadius)
+            )
+        )
     }
 
     Surface(
@@ -124,102 +163,114 @@ fun TvClickableSurface(
                         },
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(currentCorner, currentCorner)
                     )
+
+                    if (isFocused && enabled) {
+                        val innerCorner = (cornerRadius - 1.dp).coerceAtLeast(0.dp).toPx()
+                        
+                        // 1. Specular top-down glossy reflection curve
+                        drawRoundRect(
+                            brush = Brush.verticalGradient(
+                                colors = if (isLightGlass) {
+                                    listOf(
+                                        Color.White.copy(alpha = 0.70f),
+                                        Color.White.copy(alpha = 0.25f),
+                                        Color.Transparent
+                                    )
+                                } else {
+                                    listOf(
+                                        Color.White.copy(alpha = 0.50f),
+                                        Color.White.copy(alpha = 0.15f),
+                                        Color.Transparent
+                                    )
+                                },
+                                startY = 0f,
+                                endY = size.height * 0.40f
+                            ),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(currentCorner, currentCorner)
+                        )
+
+                        // 2. High-intensity Top-Left Specular highlight (radial shine spotlight catch)
+                        val spotlightWidth = 2.5.dp.toPx()
+                        val halfSpotlight = spotlightWidth / 2f
+                        drawRoundRect(
+                            brush = Brush.radialGradient(
+                                colors = if (isLightGlass) {
+                                    listOf(
+                                        Color.White.copy(alpha = 0.90f),
+                                        Color.White.copy(alpha = 0.35f),
+                                        Color.Transparent
+                                    )
+                                } else {
+                                    listOf(
+                                        Color.White.copy(alpha = 0.80f),
+                                        Color.White.copy(alpha = 0.25f),
+                                        Color.Transparent
+                                    )
+                                },
+                                center = androidx.compose.ui.geometry.Offset(size.width * 0.15f, 2f),
+                                radius = size.width * 0.50f
+                            ),
+                            topLeft = androidx.compose.ui.geometry.Offset(halfSpotlight, halfSpotlight),
+                            size = androidx.compose.ui.geometry.Size(size.width - spotlightWidth, size.height - spotlightWidth),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(currentCorner - halfSpotlight, currentCorner - halfSpotlight),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = spotlightWidth)
+                        )
+
+                        // 3. Volumetric double-edge refraction lighting (stacked strokes)
+                        // Outer fine edge light
+                        val edgeWidth = 1.dp.toPx()
+                        val halfEdge = edgeWidth / 2f
+                        drawRoundRect(
+                            brush = Brush.linearGradient(
+                                colors = if (isLightGlass) {
+                                    listOf(
+                                        Color.White.copy(alpha = 0.60f),
+                                        Color.Black.copy(alpha = 0.15f)
+                                    )
+                                } else {
+                                    listOf(
+                                        Color.White.copy(alpha = 0.45f),
+                                        Color.White.copy(alpha = 0.10f),
+                                        Color.Transparent,
+                                        Color.White.copy(alpha = 0.20f)
+                                    )
+                                }
+                            ),
+                            topLeft = androidx.compose.ui.geometry.Offset(halfEdge, halfEdge),
+                            size = androidx.compose.ui.geometry.Size(size.width - edgeWidth, size.height - edgeWidth),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(currentCorner - halfEdge, currentCorner - halfEdge),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = edgeWidth)
+                        )
+                        
+                        // Inner refraction border (thick volumetric reflection)
+                        val innerRefractionWidth = 1.5.dp.toPx()
+                        val halfInner = innerRefractionWidth / 2f
+                        val baseInset = 1.dp.toPx()
+                        drawRoundRect(
+                            brush = Brush.verticalGradient(
+                                colors = if (isLightGlass) {
+                                    listOf(
+                                        Color.White.copy(alpha = 0.50f),
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.08f)
+                                    )
+                                } else {
+                                    listOf(
+                                        Color.White.copy(alpha = 0.30f),
+                                        Color.Transparent,
+                                        Color.White.copy(alpha = 0.15f)
+                                    )
+                                }
+                            ),
+                            topLeft = androidx.compose.ui.geometry.Offset(baseInset + halfInner, baseInset + halfInner),
+                            size = androidx.compose.ui.geometry.Size(size.width - 2f * (baseInset + halfInner), size.height - 2f * (baseInset + halfInner)),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(innerCorner - halfInner, innerCorner - halfInner),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = innerRefractionWidth)
+                        )
+                    }
                 }
 
                 drawContent()
-
-                if (isGlass && isFocused && enabled) {
-                    val currentCorner = cornerRadius.toPx()
-                    val innerCorner = (cornerRadius - 1.dp).coerceAtLeast(0.dp).toPx()
-                    
-                    // 1. Specular top-down glossy reflection curve
-                    drawRoundRect(
-                        brush = Brush.verticalGradient(
-                            colors = if (isLightGlass) {
-                                listOf(
-                                    Color.White.copy(alpha = 0.70f),
-                                    Color.White.copy(alpha = 0.25f),
-                                    Color.Transparent
-                                )
-                            } else {
-                                listOf(
-                                    Color.White.copy(alpha = 0.50f),
-                                    Color.White.copy(alpha = 0.15f),
-                                    Color.Transparent
-                                )
-                            },
-                            startY = 0f,
-                            endY = size.height * 0.40f
-                        ),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(currentCorner, currentCorner)
-                    )
-
-                    // 2. High-intensity Top-Left Specular highlight (radial shine spotlight catch)
-                    drawRoundRect(
-                        brush = Brush.radialGradient(
-                            colors = if (isLightGlass) {
-                                listOf(
-                                    Color.White.copy(alpha = 0.90f),
-                                    Color.White.copy(alpha = 0.35f),
-                                    Color.Transparent
-                                )
-                            } else {
-                                listOf(
-                                    Color.White.copy(alpha = 0.80f),
-                                    Color.White.copy(alpha = 0.25f),
-                                    Color.Transparent
-                                )
-                            },
-                            center = androidx.compose.ui.geometry.Offset(size.width * 0.15f, 2f),
-                            radius = size.width * 0.50f
-                        ),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(currentCorner, currentCorner),
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx())
-                    )
-
-                    // 3. Volumetric double-edge refraction lighting (stacked strokes)
-                    // Outer fine edge light
-                    drawRoundRect(
-                        brush = Brush.linearGradient(
-                            colors = if (isLightGlass) {
-                                listOf(
-                                    Color.White.copy(alpha = 0.60f),
-                                    Color.Black.copy(alpha = 0.15f)
-                                )
-                            } else {
-                                listOf(
-                                    Color.White.copy(alpha = 0.45f),
-                                    Color.White.copy(alpha = 0.10f),
-                                    Color.Transparent,
-                                    Color.White.copy(alpha = 0.20f)
-                                )
-                            }
-                        ),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(currentCorner, currentCorner),
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
-                    )
-                    
-                    // Inner refraction border (thick volumetric reflection)
-                    drawRoundRect(
-                        brush = Brush.verticalGradient(
-                            colors = if (isLightGlass) {
-                                listOf(
-                                    Color.White.copy(alpha = 0.50f),
-                                    Color.Transparent,
-                                    Color.Black.copy(alpha = 0.08f)
-                                )
-                            } else {
-                                listOf(
-                                    Color.White.copy(alpha = 0.30f),
-                                    Color.Transparent,
-                                    Color.White.copy(alpha = 0.15f)
-                                )
-                            }
-                        ),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(innerCorner, innerCorner),
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx())
-                    )
-                }
             },
         enabled = enabled,
         shape = shape,
@@ -245,7 +296,10 @@ fun TvButton(
     glow: ButtonGlow = ButtonDefaults.glow(),
     interactionSource: MutableInteractionSource? = null,
     shape: ButtonShape = ButtonDefaults.shape(),
-    colors: ButtonColors = ButtonDefaults.colors(),
+    colors: ButtonColors = ButtonDefaults.colors(
+        focusedContainerColor = AppColors.Focus,
+        focusedContentColor = AppColors.Canvas
+    ),
     border: ButtonBorder = ButtonDefaults.border(),
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
     content: @Composable RowScope.() -> Unit,
@@ -255,6 +309,16 @@ fun TvButton(
 
     if (isGlass) {
         val focusRequester = remember { FocusRequester() }
+        val resolvedColors = ClickableSurfaceDefaults.colors(
+            containerColor = Color.Transparent,
+            focusedContainerColor = Color.Transparent,
+            pressedContainerColor = Color.Transparent,
+            disabledContainerColor = Color.Transparent,
+            contentColor = colorsPalette.textSecondary,
+            focusedContentColor = colorsPalette.textPrimary,
+            pressedContentColor = colorsPalette.textPrimary,
+            disabledContentColor = colorsPalette.textDisabled
+        )
         TvClickableSurface(
             onClick = onClick,
             modifier = modifier
@@ -262,6 +326,7 @@ fun TvButton(
                 .mouseClickable(onClick = onClick, enabled = enabled),
             enabled = enabled,
             cornerRadius = 20.dp,
+            colors = resolvedColors,
             content = {
                 Row(
                     modifier = Modifier.padding(contentPadding),
@@ -304,7 +369,10 @@ fun TvIconButton(
     glow: ButtonGlow = IconButtonDefaults.glow(),
     interactionSource: MutableInteractionSource? = null,
     shape: ButtonShape = IconButtonDefaults.shape(),
-    colors: ButtonColors = IconButtonDefaults.colors(),
+    colors: ButtonColors = IconButtonDefaults.colors(
+        focusedContainerColor = AppColors.Focus,
+        focusedContentColor = AppColors.Canvas
+    ),
     border: ButtonBorder = IconButtonDefaults.border(),
     content: @Composable BoxScope.() -> Unit,
 ) {
@@ -313,6 +381,16 @@ fun TvIconButton(
 
     if (isGlass) {
         val focusRequester = remember { FocusRequester() }
+        val resolvedColors = ClickableSurfaceDefaults.colors(
+            containerColor = Color.Transparent,
+            focusedContainerColor = Color.Transparent,
+            pressedContainerColor = Color.Transparent,
+            disabledContainerColor = Color.Transparent,
+            contentColor = colorsPalette.textSecondary,
+            focusedContentColor = colorsPalette.textPrimary,
+            pressedContentColor = colorsPalette.textPrimary,
+            disabledContentColor = colorsPalette.textDisabled
+        )
         TvClickableSurface(
             onClick = onClick,
             onLongClick = onLongClick,
@@ -321,6 +399,7 @@ fun TvIconButton(
                 .mouseClickable(onClick = onClick, enabled = enabled, onLongClick = onLongClick),
             enabled = enabled,
             cornerRadius = 28.dp,
+            colors = resolvedColors,
             content = content
         )
     } else {

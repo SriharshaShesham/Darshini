@@ -59,6 +59,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -234,19 +235,26 @@ class MoviesViewModel @Inject constructor(
                                 ))
                             }
                         } else {
-                            flow {
-                                val searchResults = movieRepository.searchMovies(params.providerId, params.query).first()
-                                emit(PreviewLoadResult(
-                                    buildSearchCatalog(
-                                        movies = searchResults,
-                                        allFavorites = params.allFavorites,
-                                        customCategories = params.customCategories,
-                                        providerCategories = params.providerCategories,
-                                        hiddenCategoryIds = params.hiddenCategoryIds
-                                    ).copy(libraryCount = searchResults.size),
-                                    false, false
-                                ))
-                            }
+                            movieRepository.searchMovies(params.providerId, params.query)
+                                .map { searchResults ->
+                                    PreviewLoadResult(
+                                        buildSearchCatalog(
+                                            movies = searchResults,
+                                            allFavorites = params.allFavorites,
+                                            customCategories = params.customCategories,
+                                            providerCategories = params.providerCategories,
+                                            hiddenCategoryIds = params.hiddenCategoryIds
+                                        ).copy(libraryCount = searchResults.size),
+                                        false, false
+                                    )
+                                }
+                                .onStart {
+                                    emit(PreviewLoadResult(
+                                        snapshot = MovieCatalogSnapshot(emptyMap(), emptyList(), emptyMap(), 0, emptyList()),
+                                        isLoadingPreviewRows = true,
+                                        hasMorePreviewRows = false
+                                    ))
+                                }
                         }
                     }
                 }

@@ -140,9 +140,14 @@ fun PremiumDialog(
                                 modifier = Modifier
                                     .weight(1f, fill = false)
                                     .heightIn(max = maxDialogBodyHeight)
+                                    .padding(vertical = 8.dp)
                                     .verticalScroll(rememberScrollState())
                             ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+                                Column(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    content = content
+                                )
                             }
 
                             Row(
@@ -209,9 +214,14 @@ fun PremiumDialog(
                                 modifier = Modifier
                                     .weight(1f, fill = false)
                                     .heightIn(max = maxDialogBodyHeight)
+                                    .padding(vertical = 8.dp)
                                     .verticalScroll(rememberScrollState())
                             ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+                                Column(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    content = content
+                                )
                             }
 
                             Row(

@@ -104,7 +104,7 @@
 
     
     <string name="dashboard_title">Your Library, Ready</string>
-    <string name="dashboard_subtitle">%1$s is active. Jump back into live, catch up on progress, or browse fresh additions.</string>
+    <string name="dashboard_subtitle">Jump back into live, catch up on progress, or browse fresh additions.</string>
     <string name="dashboard_favorite_channels">Favorite Channels</string>
     <string name="dashboard_recent_channels">Recent Channels</string>
     <string name="dashboard_favorite_movies">Favorite Movies</string>
@@ -357,11 +357,17 @@
     <string name="settings_hide_all_categories">Hide All</string>
     <string name="settings_unhide_all_categories">Unhide All</string>
     <string name="settings_category_sort_default">Provider Order</string>
+    <string name="settings_category_sort_default_desc">Keep categories in their original order from the provider playlist.</string>
     <string name="settings_category_sort_az">A-Z</string>
+    <string name="settings_category_sort_az_desc">Sort categories alphabetically from A to Z.</string>
     <string name="settings_category_sort_za">Z-A</string>
+    <string name="settings_category_sort_za_desc">Sort categories in reverse alphabetical order from Z to A.</string>
     <string name="settings_category_sort_most_items">Most Items First</string>
+    <string name="settings_category_sort_most_items_desc">Show categories with the most channels/items at the top.</string>
     <string name="settings_category_sort_least_items">Least Items First</string>
+    <string name="settings_category_sort_least_items_desc">Show categories with the fewest channels/items at the top.</string>
     <string name="settings_category_sort_custom">Custom Order</string>
+    <string name="settings_category_sort_custom_desc">Arrange and hide provider categories manually.</string>
     <string name="settings_category_type_live_description">Sort and hide provider live groups while keeping All Channels, Favorites, Recent, and custom groups in their pinned positions.</string>
     <string name="settings_category_type_movies_description">Sort and hide provider movie categories without affecting Favorites, Resume, or custom shelves.</string>
     <string name="settings_category_type_series_description">Sort and hide provider series categories without affecting Favorites, Continue Watching, or custom shelves.</string>

@@ -47,7 +47,6 @@ fun <T : Any> CategoryRow(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .suppressParentVerticalScroll()
     ) {
         if (onSeeAll != null) {
             val seeAllFocusRequester = remember { FocusRequester() }

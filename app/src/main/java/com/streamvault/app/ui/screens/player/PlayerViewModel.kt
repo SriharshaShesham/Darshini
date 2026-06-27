@@ -330,6 +330,7 @@ class PlayerViewModel @Inject constructor(
     internal var currentSeasonNumber: Int? = null
     internal var currentEpisodeNumber: Int? = null
     internal var currentStableEpisodeId: Long? = null
+    internal var lastCompletedEpisodeId: Long? = null
     internal var isVirtualCategory: Boolean = false
     internal var currentCombinedProfileMembers: List<CombinedM3uProfileMember> = emptyList()
     internal var combinedCategoriesById: Map<Long, CombinedCategory> = emptyMap()
@@ -1038,6 +1039,7 @@ class PlayerViewModel @Inject constructor(
         currentSeasonNumber = null
         currentEpisodeNumber = null
         currentStableEpisodeId = null
+        lastCompletedEpisodeId = null
         _currentSeries.value = null
         _currentEpisode.value = null
         _nextEpisode.value = null

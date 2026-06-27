@@ -223,7 +223,9 @@ private fun SeriesDetailContent(
                     onClick = onBack,
                     colors = ButtonDefaults.colors(
                         containerColor = AppColors.Surface.copy(alpha = 0.72f),
-                        contentColor = AppColors.TextPrimary
+                        contentColor = AppColors.TextPrimary,
+                        focusedContainerColor = AppColors.Focus,
+                        focusedContentColor = AppColors.Canvas
                     ),
                     border = ButtonDefaults.border(
                         border = Border(border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Outline))
@@ -297,7 +299,7 @@ private fun SeriesDetailContent(
                             Text(
                                 text = series.plot ?: stringResource(R.string.series_plot_fallback),
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = AppColors.TextSecondary,
+                                color = AppColors.TextPrimary,
                                 maxLines = 5,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -383,7 +385,7 @@ private fun SeriesDetailContent(
                             Text(
                                 text = series.plot ?: stringResource(R.string.series_plot_fallback),
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = AppColors.TextSecondary,
+                                color = AppColors.TextPrimary,
                                 maxLines = 5,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -500,7 +502,9 @@ private fun SeriesVersionSelector(
                     onClick = { onSelectVariant(variant.rawSeriesId) },
                     colors = ButtonDefaults.colors(
                         containerColor = if (selected) AppColors.Brand else AppColors.SurfaceEmphasis,
-                        contentColor = if (selected) Color.White else AppColors.TextPrimary
+                        contentColor = if (selected) Color.White else AppColors.TextPrimary,
+                        focusedContainerColor = AppColors.Focus,
+                        focusedContentColor = AppColors.Canvas
                     )
                 ) {
                     Text(
@@ -528,7 +532,9 @@ private fun SeriesDetailActions(
             onClick = { onResumeClick(resumeEpisode) },
             colors = ButtonDefaults.colors(
                 containerColor = AppColors.Brand,
-                contentColor = Color.White
+                contentColor = Color.White,
+                focusedContainerColor = AppColors.Focus,
+                focusedContentColor = AppColors.Canvas
             )
         ) {
             Text(
@@ -552,7 +558,9 @@ private fun SeriesDetailActions(
             onClick = onCopyUrl,
             colors = ButtonDefaults.colors(
                 containerColor = AppColors.SurfaceEmphasis,
-                contentColor = AppColors.TextPrimary
+                contentColor = AppColors.TextPrimary,
+                focusedContainerColor = AppColors.Focus,
+                focusedContentColor = AppColors.Canvas
             )
         ) {
             Text(stringResource(R.string.stream_url_copy))
@@ -570,7 +578,9 @@ private fun SeriesDetailFavoriteAction(
         onClick = onToggleFavorite,
         colors = ButtonDefaults.colors(
             containerColor = if (series.isFavorite) AppColors.Brand else AppColors.SurfaceEmphasis,
-            contentColor = if (series.isFavorite) Color.White else AppColors.TextSecondary
+            contentColor = if (series.isFavorite) Color.White else AppColors.TextSecondary,
+            focusedContainerColor = AppColors.Focus,
+            focusedContentColor = AppColors.Canvas
         )
     ) {
         Icon(
@@ -649,7 +659,9 @@ fun EpisodeItem(
                 onClick = onDownload,
                 colors = ButtonDefaults.colors(
                     containerColor = AppColors.SurfaceEmphasis,
-                    contentColor = AppColors.TextPrimary
+                    contentColor = AppColors.TextPrimary,
+                    focusedContainerColor = AppColors.Focus,
+                    focusedContentColor = AppColors.Canvas
                 )
             ) {
                 Text(stringResource(R.string.download_button_label))

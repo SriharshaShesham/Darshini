@@ -73,7 +73,8 @@ fun SearchInput(
     focusRequester: FocusRequester = remember { FocusRequester() },
     imeAction: ImeAction = ImeAction.Search,
     onSearch: () -> Unit = {},
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    triggerOnSubmitOnly: Boolean = false
 ) {
     val isTelevisionDevice = rememberIsTelevisionDevice()
     var hasContainerFocus by remember { mutableStateOf(false) }
@@ -161,7 +162,7 @@ fun SearchInput(
             .border(borderWidth, borderColor, RoundedCornerShape(8.dp))
             .semantics(mergeDescendants = true) {
                 contentDescription = placeholder
-                stateDescription = value.ifBlank { placeholder }
+                stateDescription = textFieldValue.text.ifBlank { placeholder }
             }
             .onFocusChanged {
                 hasContainerFocus = enabled && it.isFocused
@@ -181,7 +182,7 @@ fun SearchInput(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.weight(1f)) {
-                if (value.isEmpty() && !isFocused) {
+                if (textFieldValue.text.isEmpty() && !isFocused) {
                     Text(
                         text = placeholder,
                         style = MaterialTheme.typography.bodySmall,
@@ -193,8 +194,10 @@ fun SearchInput(
                     value = textFieldValue,
                     onValueChange = { updatedValue ->
                         textFieldValue = updatedValue
-                        if (updatedValue.text != value) {
-                            onValueChange(updatedValue.text)
+                        if (!triggerOnSubmitOnly) {
+                            if (updatedValue.text != value) {
+                                onValueChange(updatedValue.text)
+                            }
                         }
                     },
                     modifier = Modifier
@@ -245,6 +248,9 @@ fun SearchInput(
                     keyboardOptions = KeyboardOptions(imeAction = imeAction),
                     keyboardActions = KeyboardActions(
                         onSearch = {
+                            if (triggerOnSubmitOnly) {
+                                onValueChange(textFieldValue.text)
+                            }
                             onSearch()
                             acceptsInput = false
                             keyboardController?.hide()
@@ -258,16 +264,16 @@ fun SearchInput(
             }
 
             Icon(
-                imageVector = if (value.isBlank()) Icons.Default.Search else Icons.Default.Close,
+                imageVector = if (textFieldValue.text.isBlank()) Icons.Default.Search else Icons.Default.Close,
                 contentDescription = null,
-                tint = if (value.isBlank()) {
+                tint = if (textFieldValue.text.isBlank()) {
                     if (isFocused) Primary else OnSurfaceDim
                 } else {
                     OnSurface
                 },
                 modifier = Modifier
                     .padding(start = 6.dp)
-                    .clickable(enabled = enabled && value.isNotBlank()) {
+                    .clickable(enabled = enabled && textFieldValue.text.isNotBlank()) {
                         textFieldValue = TextFieldValue(text = "", selection = TextRange(0))
                         onValueChange("")
                         activateInput()

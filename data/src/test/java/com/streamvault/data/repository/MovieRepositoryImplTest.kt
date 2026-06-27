@@ -670,9 +670,10 @@ class MovieRepositoryImplTest {
     }
 
     @Test
-    fun `searchMovies returns empty without like fallback when fts has no rows`() = runTest {
+    fun `searchMovies runs like fallback when fts has no rows`() = runTest {
         whenever(preferencesRepository.parentalControlLevel).thenReturn(flowOf(0))
         whenever(movieDao.search(eq(7L), any(), any())).thenReturn(flowOf(emptyList()))
+        whenever(movieDao.searchFallback(eq(7L), any(), any())).thenReturn(flowOf(emptyList()))
         whenever(favoriteDao.getAllByType(7L, ContentType.MOVIE.name)).thenReturn(flowOf(emptyList()))
 
         val repository = createRepository()
@@ -680,7 +681,7 @@ class MovieRepositoryImplTest {
         val result = repository.searchMovies(7L, "matrix").first()
 
         assertThat(result).isEmpty()
-        verify(movieDao, never()).searchFallback(eq(7L), any(), any())
+        verify(movieDao).searchFallback(eq(7L), any(), any())
     }
 
     @Test

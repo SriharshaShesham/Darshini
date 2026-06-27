@@ -286,6 +286,15 @@ fun DashboardScreen(
                     ) { movie ->
                         MovieCard(movie = movie, onClick = { onMovieClick(movie) })
                     }
+
+                    AppHomeDashboardShelf.TOP_RATED_MOVIES -> CategoryRow(
+                        title = stringResource(R.string.dashboard_top_rated_movies),
+                        items = uiState.topRatedMovies,
+                        keySelector = { it.id },
+                        onSeeAll = { onNavigate(Routes.MOVIES) }
+                    ) { movie ->
+                        MovieCard(movie = movie, onClick = { onMovieClick(movie) })
+                    }
                 }
             }
             }
@@ -362,9 +371,9 @@ private fun DashboardHero(
         }
 
         AppHeroHeader(
-            eyebrow = providerName,
+            eyebrow = null,
             title = feature.title.ifBlank { stringResource(R.string.dashboard_title) },
-            subtitle = feature.summary.ifBlank { stringResource(R.string.dashboard_subtitle, providerName) },
+            subtitle = feature.summary.ifBlank { stringResource(R.string.dashboard_subtitle) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(heroHeight),

@@ -65,6 +65,10 @@ private class FakeExportBackupManager(
         return exportResult
     }
 
+    override suspend fun exportProvider(providerId: Long, uriString: String): Result<Unit> {
+        return exportResult
+    }
+
     override suspend fun inspectBackup(uriString: String): Result<BackupPreview> {
         lastInspectUri = uriString
         return inspectResult

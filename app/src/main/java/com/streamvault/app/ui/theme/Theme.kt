@@ -56,7 +56,7 @@ fun StreamVaultTheme(
             onBackground = selectedPalette.textPrimary,
             error = selectedPalette.live,
             onError = OnPrimary,
-            inverseOnSurface = selectedPalette.textPrimary
+            inverseOnSurface = selectedPalette.canvas
         )
     } else {
         // Dark or Glass themes use darkColorScheme
@@ -71,7 +71,7 @@ fun StreamVaultTheme(
             onBackground = selectedPalette.textPrimary,
             error = selectedPalette.live,
             onError = OnPrimary,
-            inverseOnSurface = selectedPalette.textPrimary
+            inverseOnSurface = selectedPalette.canvas
         )
     }
     val typography = rememberAppTypography()

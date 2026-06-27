@@ -28,10 +28,13 @@ internal fun PlayerViewModel.handlePlaybackEnded() {
     viewModelScope.launch {
         persistPlaybackCompletion()
         if (currentContentType == ContentType.SERIES_EPISODE) {
+            val episodeId = currentEpisode.value?.id ?: return@launch
+            if (lastCompletedEpisodeId == episodeId) return@launch
             val position = playerEngine.currentPosition.value
             val duration = playerEngine.duration.value
             if (position > AUTO_PLAY_MIN_WATCHED_MS || duration > 0L) {
                 val next = nextEpisode.value ?: return@launch
+                lastCompletedEpisodeId = episodeId
                 if (autoPlayNextEpisodeEnabled) {
                     startAutoPlayCountdown(next)
                 }
