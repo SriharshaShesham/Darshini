@@ -923,13 +923,24 @@ fun AppNavigation(mainActivity: MainActivity) {
                     }
                 },
                 onBack = {
-                    if (!returnRoute.isNullOrBlank()) {
-                        navController.navigate(returnRoute) {
-                            popUpTo(backStackEntry.destination.route ?: Routes.MOVIE_DETAIL) { inclusive = true }
-                            launchSingleTop = true
+                    if (!navController.popBackStack()) {
+                        if (!returnRoute.isNullOrBlank()) {
+                            navController.navigate(returnRoute) {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        } else {
+                            navController.navigate(Routes.HOME) {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
-                    } else {
-                        navController.popBackStack()
                     }
                 }
             )
@@ -962,13 +973,24 @@ fun AppNavigation(mainActivity: MainActivity) {
                     )
                 },
                 onBack = {
-                    if (!returnRoute.isNullOrBlank()) {
-                        navController.navigate(returnRoute) {
-                            popUpTo(backStackEntry.destination.route ?: Routes.SERIES_DETAIL) { inclusive = true }
-                            launchSingleTop = true
+                    if (!navController.popBackStack()) {
+                        if (!returnRoute.isNullOrBlank()) {
+                            navController.navigate(returnRoute) {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        } else {
+                            navController.navigate(Routes.HOME) {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
-                    } else {
-                        navController.popBackStack()
                     }
                 }
             )

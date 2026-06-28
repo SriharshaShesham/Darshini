@@ -710,7 +710,6 @@ internal class SyncCatalogStore(
         insert: suspend (List<S>) -> Unit
     ): StagingResult {
         val seenKeys = HashSet<K>()
-        val bestItems = java.util.PriorityQueue<T>(limit.coerceAtLeast(1), bestFirstComparator.reversed())
         val batch = ArrayList<S>(STAGE_BATCH_SIZE)
         var distinctCount = 0
 
@@ -719,38 +718,29 @@ internal class SyncCatalogStore(
                 return@forEach
             }
             distinctCount++
-            if (bestItems.size < limit) {
-                bestItems += item
-            } else if (limit > 0 && bestFirstComparator.compare(item, bestItems.peek()) < 0) {
-                bestItems.poll()
-                bestItems += item
+            if (limit > 0 && distinctCount > limit) {
+                return@forEach
+            }
+            batch.add(stageBuilder(item))
+            if (batch.size >= STAGE_BATCH_SIZE) {
+                insert(batch)
+                batch.clear()
             }
         }
-
-        val overflowed = distinctCount > limit
-        if (overflowed) {
-            Log.w(
-                TAG,
-                "Provider $providerId $logLabel staging exceeded limit $limit; kept ${bestItems.size} highest-priority distinct rows out of $distinctCount."
-            )
-        }
-
-        bestItems
-            .toList()
-            .sortedWith(bestFirstComparator)
-            .forEach { item ->
-                batch.add(stageBuilder(item))
-                if (batch.size >= STAGE_BATCH_SIZE) {
-                    insert(batch)
-                    batch.clear()
-                }
-            }
 
         if (batch.isNotEmpty()) {
             insert(batch)
         }
 
-        return StagingResult(acceptedCount = bestItems.size, overflowed = overflowed)
+        val overflowed = limit > 0 && distinctCount > limit
+        if (overflowed) {
+            Log.w(
+                TAG,
+                "Provider $providerId $logLabel staging exceeded limit $limit; kept first $limit distinct rows out of $distinctCount."
+            )
+        }
+
+        return StagingResult(acceptedCount = if (overflowed) limit else distinctCount, overflowed = overflowed)
     }
 
     private suspend fun <T> insertStageRows(
