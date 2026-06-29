@@ -13,6 +13,7 @@ This app includes several custom modifications and enhanced features to deliver 
 
 
 ### 1. Collapsible Sidebar & Navigation Options
+- **Hamburger Toggle**: A hamburger icon at the top of the left sidebar lets you manually collapse it to icon-only view (72dp) or expand it to full width (240dp) with a smooth animation. State persists as you navigate between screens.
 - **Focus-based Expand/Collapse**: The left sidebar navigation automatically expands to show text labels when focused, and collapses to show icons only when focus moves to content.
 - **Top Bar vs. Sidebar Switch**: You can toggle the primary navigation layout between a traditional Top Navigation Bar and the Collapsible Left Sidebar.
   - **Steps**: Go to **Settings** -> **Interface/Navigation Options** and toggle the navigation style.
@@ -26,11 +27,13 @@ This app includes several custom modifications and enhanced features to deliver 
 
 ### 2. Custom Playlist & Category Arrangement
 - **Manual Ordering**: Arrange the order of your movie, series, and live categories exactly how you want them (e.g., place your preferred languages or categories at the top).
-- **Visibility Toggle**: Hide unused or unwanted categories with an eye icon.
+- **Visibility Toggle**: Hide unused or unwanted categories with an eye icon. Changes apply immediately — no Save button required.
+- **Sync Performance**: Hidden categories are skipped during background sync, so hiding unused categories reduces sync time and data usage.
+- **Category Control in UI Settings**: The Category Control panel has moved to **Settings → UI** so you can access it independently of the provider settings page.
   - **Steps**:
-    1. Navigate to **Settings** and select **Movie Categories**, **Live TV Categories**, or **Series Categories**.
-    2. Choose the **Custom Order** option in the sort/arrangement window.
-    3. Use the **Up/Down/Top** arrow icons to change the priority order and the **Eye** icon to toggle visibility.
+    1. Navigate to **Settings** → **UI** → **Category Control**.
+    2. Use the **Up/Down/Top** arrow icons to reorder categories or the **Eye** icon to toggle visibility.
+    3. Choose the **Custom Order** sort mode in the category sort settings to activate your custom ordering.
 
 ### 3. Provider Details Export & Import
 - **Decrypted Export**: Export your complete provider configurations (with passwords securely decrypted) to reuse them on other devices.
@@ -51,6 +54,15 @@ This app includes several custom modifications and enhanced features to deliver 
 - **Next Episode Shortcut**: Added a "Next Episode" button directly next to the fast forward button in the player control bar when watching series.
 - **External Player Support**: Option to switch the built-in media player with external players like VLC or MX Player.
   - **Steps**: Toggle the Player settings under **Settings** -> **Player Options** -> **External Playback Mode**.
+
+### 7. Category Detail Navigation Header
+- **Proper Navigation Header**: When browsing a category grid (Movies or Series), a header row replaces the old chip-based navigation. It shows a **back arrow** on the left, the **category name** in the center, and a **sync icon** on the right for on-demand refresh.
+- **Scroll Position Restore**: Pressing back from a category grid returns you to exactly where you were in the preview rows list — scroll position is preserved.
+
+### 6. Per-Category On-Demand Sync
+- **Sync Button on Category Rows**: Every Movies and Series category row displays a **Sync** button alongside the "See All" button. Pressing it fetches the complete catalog for that category on demand, without waiting for a full provider sync.
+- **Smart Background Preview Sync**: The default background sync fetches a fast preview of the top items per category so the app loads quickly after setup. Use the per-category Sync button whenever you want the full listing for a specific category.
+- **Category Options Dialog**: Long-press any category header to open its options. A new **Sync Category** action is available there as an alternative to the row button.
 
 ---
 
@@ -140,6 +152,8 @@ This app includes several custom modifications and enhanced features to deliver 
 
 ### Navigation And TV UX
 - Designed for Android TV and D-pad navigation first
+- Collapsible left sidebar with hamburger toggle — icon-only at 72dp, full labels at 240dp, animated transition
+- Category detail header with back arrow, category name, and per-category sync button; back navigation restores scroll position in the parent list
 - Fast channel browsing with large-playlist friendly layouts
 - Numeric remote input for direct channel entry
 - Configurable startup landing screen so the app can open Home, Live TV, Movies, Series, Guide, Downloads, Plugins, or Settings first
@@ -181,9 +195,12 @@ This app includes several custom modifications and enhanced features to deliver 
 - Continue watching, playback history, and detail-screen resume actions with saved position context
 - In-player episode switching for series
 - Automatic next-episode playback
+- Per-category on-demand Sync button on every category row and in the category options dialog to fetch the full catalog for a single category without triggering a full provider sync
+- Smart two-tier sync: fast background preview (top items per category) keeps initial load quick; full category fetch is available on demand via the Sync button
 
-### Parental Controls
-- Hide categories completely
+### Parental Controls And Category Management
+- Hide categories completely — hidden categories are excluded from background sync to improve performance and reduce data usage
+- Category Control moved to Settings → UI for easier access; supports drag-style reordering with Up/Down/Top buttons that auto-save instantly
 - Lock categories behind a PIN
 - Option to hide locked content from browsing views
 - Adult-category detection using provider flags and category naming heuristics
