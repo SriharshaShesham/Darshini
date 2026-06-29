@@ -55,10 +55,10 @@ internal fun SettingsContentPane(
                 context = context,
                 appThemeLabel = screenLabels.appThemeLabel,
                 onShowThemeDialogChange = { dialogState.showThemeDialog = it },
-                onCategorySortDialogTypeChange = { dialogState.categorySortDialogType = it },
                 onNavigateToCategoryControl = uiState.activeProviderId?.let { providerId ->
                     { onNavigateToParentalControl(providerId) }
-                }
+                },
+                onNavigateToSectionVisibility = { dialogState.showTopNavigationDialog = true }
             )
         } else if (dialogState.selectedCategory == 1) {
             providerSection(

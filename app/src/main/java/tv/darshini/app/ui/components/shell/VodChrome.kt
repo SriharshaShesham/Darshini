@@ -55,7 +55,6 @@ import tv.darshini.app.ui.components.dialogs.PremiumDialog
 import tv.darshini.app.ui.components.dialogs.PremiumDialogFooterButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.ui.text.font.FontWeight
 import tv.darshini.app.ui.interaction.TvClickableSurface
@@ -109,11 +108,13 @@ fun CategoryDetailHeader(
                 .weight(1f)
                 .padding(horizontal = 8.dp)
         )
-        TvIconButton(onClick = onSync) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = stringResource(R.string.settings_sync_btn),
-                tint = AppColors.TextSecondary
+        TvButton(
+            onClick = onSync,
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.settings_sync_btn),
+                style = MaterialTheme.typography.labelMedium
             )
         }
     }

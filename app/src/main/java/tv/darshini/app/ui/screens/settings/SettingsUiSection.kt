@@ -19,8 +19,6 @@ import tv.darshini.app.R
 import tv.darshini.app.ui.interaction.TvClickableSurface
 import tv.darshini.app.ui.theme.Primary
 import tv.darshini.app.ui.theme.SettingsCardBackground
-import tv.darshini.domain.model.CategorySortMode
-import tv.darshini.domain.model.ContentType
 
 internal fun LazyListScope.settingsUiSection(
     uiState: SettingsUiState,
@@ -28,8 +26,8 @@ internal fun LazyListScope.settingsUiSection(
     context: Context,
     appThemeLabel: String,
     onShowThemeDialogChange: (Boolean) -> Unit,
-    onCategorySortDialogTypeChange: (String?) -> Unit,
-    onNavigateToCategoryControl: (() -> Unit)? = null
+    onNavigateToCategoryControl: (() -> Unit)? = null,
+    onNavigateToSectionVisibility: (() -> Unit)? = null
 ) {
     item {
         // App Theme Selector
@@ -53,33 +51,21 @@ internal fun LazyListScope.settingsUiSection(
             }
         }
 
-        // Live Channels Order
-        ClickableSettingsRow(
-            label = stringResource(R.string.settings_category_sort_live),
-            value = formatCategorySortModeLabel(uiState.categorySortModes[ContentType.LIVE] ?: CategorySortMode.DEFAULT, context),
-            onClick = { onCategorySortDialogTypeChange(ContentType.LIVE.name) }
-        )
-
-        // Movies Order
-        ClickableSettingsRow(
-            label = stringResource(R.string.settings_category_sort_movies),
-            value = formatCategorySortModeLabel(uiState.categorySortModes[ContentType.MOVIE] ?: CategorySortMode.DEFAULT, context),
-            onClick = { onCategorySortDialogTypeChange(ContentType.MOVIE.name) }
-        )
-
-        // Series Order
-        ClickableSettingsRow(
-            label = stringResource(R.string.settings_category_sort_series),
-            value = formatCategorySortModeLabel(uiState.categorySortModes[ContentType.SERIES] ?: CategorySortMode.DEFAULT, context),
-            onClick = { onCategorySortDialogTypeChange(ContentType.SERIES.name) }
-        )
-
         // Category Control
         if (onNavigateToCategoryControl != null) {
             ClickableSettingsRow(
                 label = stringResource(R.string.settings_provider_category_controls_action),
                 value = "",
                 onClick = onNavigateToCategoryControl
+            )
+        }
+
+        // Section Visibility
+        if (onNavigateToSectionVisibility != null) {
+            ClickableSettingsRow(
+                label = stringResource(R.string.settings_section_visibility),
+                value = "",
+                onClick = onNavigateToSectionVisibility
             )
         }
     }

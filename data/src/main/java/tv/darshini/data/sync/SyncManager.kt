@@ -52,6 +52,7 @@ import tv.darshini.data.security.CredentialCrypto
 import tv.darshini.data.util.AdultContentClassifier
 import tv.darshini.data.util.UrlSecurityPolicy
 import tv.darshini.domain.model.Channel
+import tv.darshini.domain.model.AppTopLevelDestination
 import tv.darshini.domain.model.ContentType
 import tv.darshini.domain.model.Movie
 import tv.darshini.domain.model.ProviderEpgSyncMode
@@ -1026,6 +1027,7 @@ class SyncManager @Inject constructor(
         val useTextClassification = preferencesRepository.useXtreamTextClassification.first()
         val enableBase64TextCompatibility = preferencesRepository.xtreamBase64TextCompatibility.first()
         val hiddenLiveCategoryIds = preferencesRepository.getHiddenCategoryIds(provider.id, ContentType.LIVE).first()
+        val enabledDestinations = preferencesRepository.appTopLevelDestinations.first().toSet()
         val api = createXtreamSyncProvider(provider, useTextClassification, enableBase64TextCompatibility)
         val runtimeProfile = CatalogSyncRuntimeProfile.from(applicationContext)
         val now = System.currentTimeMillis()
@@ -1049,6 +1051,9 @@ class SyncManager @Inject constructor(
             lastAttemptAt = now
         )
         val liveOutcome = runCatching {
+            if (AppTopLevelDestination.LIVE_TV !in enabledDestinations) {
+                return@runCatching metadata.liveCount
+            }
             val recoveredLiveCommit = if (trackInitialLiveOnboarding) {
                 recoverXtreamLiveOnboardingSession(
                     provider = provider,
@@ -1238,18 +1243,23 @@ class SyncManager @Inject constructor(
             )
             throw error
         }
-        upsertXtreamIndexJob(
-            providerId = provider.id,
-            section = ContentType.LIVE.name,
-            state = "QUEUED",
-            now = now,
-            totalCategories = 1,
-            completedCategories = 0,
-            indexedRows = liveCount,
-            lastAttemptAt = now,
-            lastError = null
-        )
-        scheduleXtreamIndexSync(provider.id, ContentType.LIVE)
+        if (AppTopLevelDestination.LIVE_TV in enabledDestinations) {
+            upsertXtreamIndexJob(
+                providerId = provider.id,
+                section = ContentType.LIVE.name,
+                state = "QUEUED",
+                now = now,
+                totalCategories = 1,
+                completedCategories = 0,
+                indexedRows = liveCount,
+                lastAttemptAt = now,
+                lastError = null
+            )
+            scheduleXtreamIndexSync(provider.id, ContentType.LIVE)
+        }
+
+        var movieCategoryCount = 0
+        var seriesCategoryCount = 0
 
         // Transition VOD : signale a l'UI qu'on passe a la section Movies. Le total
         // reel des categories VOD n'est connu qu'a l'interieur de `syncXtreamCategoryShell`,
@@ -1263,27 +1273,29 @@ class SyncManager @Inject constructor(
                 itemsIndexed = liveCount
             )
         )
-        val movieCategoryCount = syncXtreamCategoryShell(
-            provider = provider,
-            api = api,
-            contentType = ContentType.MOVIE,
-            label = "Movies",
-            now = now,
-            onProgress = onProgress
-        ).getOrElse { error ->
-            warnings += "Movies categories could not be loaded; movie indexing will retry later."
-            upsertXtreamIndexJob(
-                providerId = provider.id,
-                section = ContentType.MOVIE.name,
-                state = xtreamIndexFailureState(error),
+        if (AppTopLevelDestination.MOVIES in enabledDestinations) {
+            movieCategoryCount = syncXtreamCategoryShell(
+                provider = provider,
+                api = api,
+                contentType = ContentType.MOVIE,
+                label = "Movies",
                 now = now,
-                lastAttemptAt = now,
-                lastError = sanitizeThrowableMessage(error)
-            )
-            0
-        }
-        if (movieCategoryCount > 0) {
-            scheduleXtreamIndexSync(provider.id, ContentType.MOVIE)
+                onProgress = onProgress
+            ).getOrElse { error ->
+                warnings += "Movies categories could not be loaded; movie indexing will retry later."
+                upsertXtreamIndexJob(
+                    providerId = provider.id,
+                    section = ContentType.MOVIE.name,
+                    state = xtreamIndexFailureState(error),
+                    now = now,
+                    lastAttemptAt = now,
+                    lastError = sanitizeThrowableMessage(error)
+                )
+                0
+            }
+            if (movieCategoryCount > 0) {
+                scheduleXtreamIndexSync(provider.id, ContentType.MOVIE)
+            }
         }
         // Transition SERIES : meme principe que VOD ci-dessus. `itemsIndexed` reste a
         // `liveCount` car VOD ne stage pas d'items dans la base au moment du shell
@@ -1297,27 +1309,29 @@ class SyncManager @Inject constructor(
                 itemsIndexed = liveCount
             )
         )
-        val seriesCategoryCount = syncXtreamCategoryShell(
-            provider = provider,
-            api = api,
-            contentType = ContentType.SERIES,
-            label = "Series",
-            now = now,
-            onProgress = onProgress
-        ).getOrElse { error ->
-            warnings += "Series categories could not be loaded; series indexing will retry later."
-            upsertXtreamIndexJob(
-                providerId = provider.id,
-                section = ContentType.SERIES.name,
-                state = xtreamIndexFailureState(error),
+        if (AppTopLevelDestination.SERIES in enabledDestinations) {
+            seriesCategoryCount = syncXtreamCategoryShell(
+                provider = provider,
+                api = api,
+                contentType = ContentType.SERIES,
+                label = "Series",
                 now = now,
-                lastAttemptAt = now,
-                lastError = sanitizeThrowableMessage(error)
-            )
-            0
-        }
-        if (seriesCategoryCount > 0) {
-            scheduleXtreamIndexSync(provider.id, ContentType.SERIES)
+                onProgress = onProgress
+            ).getOrElse { error ->
+                warnings += "Series categories could not be loaded; series indexing will retry later."
+                upsertXtreamIndexJob(
+                    providerId = provider.id,
+                    section = ContentType.SERIES.name,
+                    state = xtreamIndexFailureState(error),
+                    now = now,
+                    lastAttemptAt = now,
+                    lastError = sanitizeThrowableMessage(error)
+                )
+                0
+            }
+            if (seriesCategoryCount > 0) {
+                scheduleXtreamIndexSync(provider.id, ContentType.SERIES)
+            }
         }
 
         if (trackInitialLiveOnboarding) {
@@ -3865,7 +3879,15 @@ class SyncManager @Inject constructor(
         val now = System.currentTimeMillis()
 
         if (force || ContentCachePolicy.shouldRefresh(metadata.lastLiveSuccess, ContentCachePolicy.CATALOG_TTL_MILLIS, now)) {
-            val stats = withContext(Dispatchers.IO) { m3uImporter.importPlaylist(provider, onProgress) }
+            val m3uEnabledDestinations = preferencesRepository.appTopLevelDestinations.first().toSet()
+            val stats = withContext(Dispatchers.IO) {
+                m3uImporter.importPlaylist(
+                    provider,
+                    onProgress,
+                    includeLive = AppTopLevelDestination.LIVE_TV in m3uEnabledDestinations,
+                    includeMovies = AppTopLevelDestination.MOVIES in m3uEnabledDestinations
+                )
+            }
             if (stats.liveCount == 0 && stats.movieCount == 0) {
                 throw IllegalStateException("Playlist is empty or contains no supported entries")
             }
@@ -3994,8 +4016,10 @@ class SyncManager @Inject constructor(
         var liveCount = metadata.liveCount
         var movieCategoryCount = 0
         var seriesCategoryCount = 0
+        val stalkerEnabledDestinations = preferencesRepository.appTopLevelDestinations.first().toSet()
 
-        if (force || ContentCachePolicy.shouldRefresh(metadata.lastLiveSuccess, ContentCachePolicy.CATALOG_TTL_MILLIS, now)) {
+        if (AppTopLevelDestination.LIVE_TV in stalkerEnabledDestinations &&
+            (force || ContentCachePolicy.shouldRefresh(metadata.lastLiveSuccess, ContentCachePolicy.CATALOG_TTL_MILLIS, now))) {
             upsertXtreamIndexJob(
                 providerId = provider.id,
                 section = ContentType.LIVE.name,
@@ -4037,7 +4061,8 @@ class SyncManager @Inject constructor(
             warnings += liveCatalogResult.warnings
         }
 
-        if (force || ContentCachePolicy.shouldRefresh(metadata.lastMovieSuccess, ContentCachePolicy.CATALOG_TTL_MILLIS, now)) {
+        if (AppTopLevelDestination.MOVIES in stalkerEnabledDestinations &&
+            (force || ContentCachePolicy.shouldRefresh(metadata.lastMovieSuccess, ContentCachePolicy.CATALOG_TTL_MILLIS, now))) {
             progress(provider.id, onProgress, "Preparing Movies...")
             val categories = when (val categoriesResult = api.getVodCategories()) {
                 is tv.darshini.domain.model.Result.Success -> categoriesResult.data
@@ -4104,7 +4129,8 @@ class SyncManager @Inject constructor(
             queuedMovieIndex = true
         }
 
-        if (force || ContentCachePolicy.shouldRefresh(metadata.lastSeriesSuccess, ContentCachePolicy.CATALOG_TTL_MILLIS, now)) {
+        if (AppTopLevelDestination.SERIES in stalkerEnabledDestinations &&
+            (force || ContentCachePolicy.shouldRefresh(metadata.lastSeriesSuccess, ContentCachePolicy.CATALOG_TTL_MILLIS, now))) {
             progress(provider.id, onProgress, "Preparing Series...")
             val categories = when (val categoriesResult = api.getSeriesCategories()) {
                 is tv.darshini.domain.model.Result.Success -> categoriesResult.data
