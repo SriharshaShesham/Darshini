@@ -70,6 +70,8 @@ class ParentalControlGroupViewModel @Inject constructor(
         }
     }
 
+    val categoryOrderByType: StateFlow<Map<ContentType, List<String>>> = _categoryOrderByType.asStateFlow()
+
     fun getCategoryOrder(type: ContentType): List<String> = _categoryOrderByType.value[type] ?: emptyList()
 
     private val hiddenCategoriesByType = combine(

@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -294,7 +295,7 @@ fun AppScreenScaffold(
             }
     ) {
         if (resolvedChrome == AppNavigationChrome.Rail) {
-            var railExpanded by rememberSaveable { mutableStateOf(true) }
+            var railExpanded by rememberSaveable { mutableStateOf(false) }
             val railWidth by animateDpAsState(
                 targetValue = if (railExpanded) 240.dp else 72.dp,
                 label = "railWidth"
@@ -312,6 +313,7 @@ fun AppScreenScaffold(
 
                 Column(
                     modifier = Modifier
+                        .focusGroup()
                         .fillMaxSize()
                         .padding(
                             start = spacing.lg,
@@ -1092,7 +1094,7 @@ private fun RailButton(
                     .clip(RoundedCornerShape(2.dp))
                     .background(if (selected) AppColors.Brand else Color.Transparent)
             )
-            Spacer(modifier = Modifier.width(if (isExpanded) 12.dp else 24.dp))
+            Spacer(modifier = Modifier.width(if (isExpanded) 12.dp else 8.dp))
             Icon(
                 imageVector = icon,
                 contentDescription = label,

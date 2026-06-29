@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
@@ -63,8 +64,8 @@ import tv.darshini.app.ui.interaction.TvIconButton
 import kotlinx.coroutines.launch
 
 private enum class CategoryControlsMode {
-    PROTECTION,
-    VISIBILITY
+    VISIBILITY,
+    PROTECTION
 }
 
 private enum class CategoryPinAction {
@@ -97,14 +98,15 @@ fun ParentalControlGroupScreen(
     var pinAction by rememberSaveable { mutableStateOf<CategoryPinAction?>(null) }
     var pinError by rememberSaveable { mutableStateOf<String?>(null) }
     val selectedTypeLabel = contentTypeTabLabel(selectedType)
-    val categoryOrder = viewModel.getCategoryOrder(selectedType)
+    val categoryOrderByType by viewModel.categoryOrderByType.collectAsState()
     val filteredCategories = uiState.categories
         .filter { item ->
             item.category.type == selectedType &&
                 (uiState.searchQuery.isBlank() || item.category.name.contains(uiState.searchQuery, ignoreCase = true))
         }
         .sortedBy { item ->
-            val idx = categoryOrder.indexOfFirst { it.equals(item.category.name, ignoreCase = true) }
+            val order = categoryOrderByType[selectedType] ?: emptyList()
+            val idx = order.indexOfFirst { it.equals(item.category.name, ignoreCase = true) }
             if (idx < 0) Int.MAX_VALUE else idx
         }
     val hiddenCount = uiState.categories.count { item ->

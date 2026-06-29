@@ -804,49 +804,6 @@ private fun MoviesVodContent(
         }
 
         if (!uiState.isReorderMode) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                val browseOptionsDetail = vodActiveFilterSortDetail(selectedFilterType, selectedSortBy)
-                val hasActiveFilterSort = selectedFilterType != LibraryFilterType.ALL || selectedSortBy != LibrarySortBy.LIBRARY
-                VodActionChipRow(
-                    actions = buildList {
-                        add(
-                            VodActionChip(
-                                key = "categories",
-                                label = stringResource(R.string.movies_categories_title),
-                                onClick = { showCategoryPicker = true }
-                            )
-                        )
-                        add(
-                            VodActionChip(
-                                key = "search_toggle",
-                                label = stringResource(
-                                    if (showSearchBar) R.string.library_action_hide_search else R.string.search_title
-                                ),
-                                onClick = { showSearchBar = !showSearchBar }
-                            )
-                        )
-                        add(
-                            VodActionChip(
-                                key = "browse_options",
-                                label = stringResource(R.string.library_action_filters_sort),
-                                detail = browseOptionsDetail,
-                                onClick = { showBrowseOptions = true }
-                            )
-                        )
-                        if (uiState.selectedCategory != uiState.fullLibraryCategoryName) {
-                            add(
-                                VodActionChip(
-                                    key = uiState.fullLibraryCategoryName,
-                                    label = stringResource(R.string.library_full_browse_title_movies),
-                                    onClick = onSelectFullLibraryBrowse
-                                )
-                            )
-                        }
-                    },
-                    selectedKey = if (hasActiveFilterSort) "browse_options" else null,
-                    modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)
-                )
-            }
 
             if (showSearchBar) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
