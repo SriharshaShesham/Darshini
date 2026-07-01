@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.streamvault.data"
+    namespace = "tv.darshini.data"
     compileSdk = 36
 
     defaultConfig {

@@ -125,7 +125,8 @@ fun CategoryDetailHeader(
 fun VodActionChipRow(
     actions: List<VodActionChip>,
     selectedKey: String? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    firstItemFocusRequester: FocusRequester? = null,
 ) {
     ChipRowSection(
         chips = actions.map { action ->
@@ -142,7 +143,8 @@ fun VodActionChipRow(
         chipHorizontalPadding = 14,
         supportingTextStyle = MaterialTheme.typography.labelSmall,
         supportingTextMaxLines = 1,
-        focusedContainerBoostWhenSelected = true
+        focusedContainerBoostWhenSelected = true,
+        firstItemFocusRequester = firstItemFocusRequester,
     )
 }
 

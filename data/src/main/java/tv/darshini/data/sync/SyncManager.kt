@@ -1367,7 +1367,10 @@ class SyncManager @Inject constructor(
         )
         syncMetadataRepository.updateMetadata(metadata)
 
-        val epgState = if (provider.epgSyncMode == ProviderEpgSyncMode.SKIP) "IDLE" else "QUEUED"
+        val epgEnabled = provider.epgSyncMode != ProviderEpgSyncMode.SKIP &&
+            (AppTopLevelDestination.LIVE_TV in enabledDestinations ||
+                AppTopLevelDestination.GUIDE in enabledDestinations)
+        val epgState = if (epgEnabled) "QUEUED" else "IDLE"
         upsertXtreamIndexJob(
             providerId = provider.id,
             section = "EPG",
@@ -1375,7 +1378,7 @@ class SyncManager @Inject constructor(
             now = now,
             lastAttemptAt = if (epgState == "QUEUED") now else 0L
         )
-        if (provider.epgSyncMode != ProviderEpgSyncMode.SKIP) {
+        if (epgEnabled) {
             runCatching { scheduleBackgroundEpgSync(provider.id) }
                 .onFailure { error ->
                     Log.w(TAG, "Failed to schedule Xtream background EPG sync for provider ${provider.id}: ${sanitizeThrowableMessage(error)}")
@@ -1600,12 +1603,23 @@ class SyncManager @Inject constructor(
         val useTextClassification = preferencesRepository.useXtreamTextClassification.first()
         val enableBase64TextCompatibility = preferencesRepository.xtreamBase64TextCompatibility.first()
         val api = createXtreamSyncProvider(provider, useTextClassification, enableBase64TextCompatibility)
-        val sections = when (section) {
+        val enabledDestinations = preferencesRepository.appTopLevelDestinations.first().toSet()
+        val requestedSections = when (section) {
             ContentType.MOVIE -> listOf(ContentType.MOVIE)
             ContentType.SERIES -> listOf(ContentType.SERIES)
             ContentType.LIVE -> listOf(ContentType.LIVE)
             ContentType.SERIES_EPISODE -> emptyList()
             null -> listOf(ContentType.LIVE, ContentType.MOVIE, ContentType.SERIES)
+        }
+        // A section can still be queued from before it was hidden (or by a periodic worker).
+        // Drop hidden sections at execution time so their index never downloads.
+        val sections = requestedSections.filter { contentType ->
+            when (contentType) {
+                ContentType.LIVE -> AppTopLevelDestination.LIVE_TV in enabledDestinations
+                ContentType.MOVIE -> AppTopLevelDestination.MOVIES in enabledDestinations
+                ContentType.SERIES -> AppTopLevelDestination.SERIES in enabledDestinations
+                ContentType.SERIES_EPISODE -> false
+            }
         }
 
         var sawRetryableFailure = false
@@ -4344,6 +4358,15 @@ class SyncManager @Inject constructor(
         var updatedMetadata = metadata
         val warnings = mutableListOf<String>()
         var hasRetryableFailure = false
+
+        // EPG only feeds the Live TV channel guide and the standalone Guide screen. If both of
+        // those sections are hidden, downloading and resolving EPG is pure wasted sync time.
+        val epgConsumers = preferencesRepository.appTopLevelDestinations.first().toSet()
+        if (AppTopLevelDestination.LIVE_TV !in epgConsumers &&
+            AppTopLevelDestination.GUIDE !in epgConsumers) {
+            return EpgSyncResult(warnings = emptyList(), hasRetryableFailure = false)
+        }
+
         val hiddenLiveCategoryIds = preferencesRepository.getHiddenCategoryIds(provider.id, ContentType.LIVE).first()
 
         when (provider.type) {

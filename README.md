@@ -64,6 +64,12 @@ This app includes several custom modifications and enhanced features to deliver 
 - **Smart Background Preview Sync**: The default background sync fetches a fast preview of the top items per category so the app loads quickly after setup. Use the per-category Sync button whenever you want the full listing for a specific category.
 - **Category Options Dialog**: Long-press any category header to open its options. A new **Sync Category** action is available there as an alternative to the row button.
 
+### 8. Focus Restore After Opening a Movie/Series
+- **Return to Where You Were**: When you open a movie or series from a category row and press back from the detail screen, focus returns to the exact poster you opened — no more snapping to the top or the sidebar. Your paged-in category rows and scroll position are preserved across the trip.
+
+### 9. Remove from Continue Watching
+- **Unwatch Shortcut**: Long-press (hold the enter/select button) any tile in a **Continue Watching** row to remove it from your history, so finished or unwanted items stop reappearing. Works on the Home, Movies, and Series screens.
+
 ---
 
 # Guide to Installing Darshini APK on Fire Stick & Google TV

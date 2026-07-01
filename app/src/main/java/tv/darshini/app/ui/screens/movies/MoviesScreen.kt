@@ -125,6 +125,27 @@ fun MoviesScreen(
         viewModel.selectCategory(null)
     }
 
+    // Whenever selectedCategory changes (null→non-null entering category detail, or non-null→null
+    // returning to preview), the currently-focused element is removed from the composition tree.
+    // Compose TV's fallback focus search then finds the first focusable node — the sidebar hamburger.
+    // ON_RESUME never fires for in-screen transitions, so FocusRestoreHost can't help here.
+    // Retry focus at increasing intervals: back-to-preview requires focus to reach a chip inside
+    // LazyRow inside a LazyColumn item — more nesting than entering category detail — so the first
+    // attempt may silently fail while inner lazy items are still being laid out.
+    var previousSelectedCategory by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(uiState.selectedCategory) {
+        val prev = previousSelectedCategory
+        previousSelectedCategory = uiState.selectedCategory
+        if (prev != uiState.selectedCategory) {
+            var focused = false
+            for (delayMs in longArrayOf(80L, 150L, 250L, 400L)) {
+                delay(delayMs)
+                focused = initialContentFocusRequester.requestFocusSafely(tag = "MoviesScreen", target = "Category transition")
+                if (focused) break
+            }
+        }
+    }
+
     ProtectedVodPinDialog(
         visible = showPinDialog,
         error = pinError,
@@ -226,8 +247,13 @@ fun MoviesScreen(
                 onSelectedSortByChange = viewModel::setSelectedLibrarySortBy,
                 searchQuery = uiState.searchQuery,
                 onSearchQueryChange = viewModel::setSearchQuery,
-                onMovieClick = onMovieClick,
+                onMovieClick = { movie ->
+                    // Remember which movie was opened so focus can return to it on back-nav.
+                    viewModel.rememberFocusedMovie(movie.id)
+                    onMovieClick(movie)
+                },
                 onContinueWatchingPlay = onContinueWatchingPlay,
+                onRemoveContinueWatching = viewModel::removeFromContinueWatching,
                 onProtectedMovieClick = { movie ->
                     pendingCategory = null
                     pendingMovie = movie
@@ -348,6 +374,7 @@ private fun MoviesVodContent(
     onSearchQueryChange: (String) -> Unit,
     onMovieClick: (Movie) -> Unit,
     onContinueWatchingPlay: (PlaybackHistory) -> Unit,
+    onRemoveContinueWatching: (PlaybackHistory) -> Unit,
     onProtectedMovieClick: (Movie) -> Unit,
     onProtectedCategoryClick: (Category) -> Unit,
     onShowDialog: (Movie) -> Unit,
@@ -447,7 +474,14 @@ private fun MoviesVodContent(
             }
             .toList()
     }
-    val fallbackMovieId = favoriteMovies.firstOrNull()?.id
+    // When returning from MovieDetail, restore focus to the movie the user opened — but only if it
+    // lives in a provider category row (the deep-scroll case). The focusRequester is attached to
+    // that card (line below) so focus lands on-screen after the saved scroll offset is restored.
+    val restoreTargetId = uiState.lastFocusedMovieId?.takeIf { id ->
+        catEntries.any { entry -> entry.value.any { it.id == id } }
+    }
+    val fallbackMovieId = restoreTargetId
+        ?: favoriteMovies.firstOrNull()?.id
         ?: freshMovies.firstOrNull()?.id
         ?: topRatedMovies.firstOrNull()?.id
         ?: catEntries.firstOrNull()?.value?.firstOrNull()?.id
@@ -573,15 +607,19 @@ private fun MoviesVodContent(
                             }
                         },
                         modifier = Modifier
-                            .padding(top = 2.dp, bottom = 6.dp)
-                            .focusRequester(initialFocusRequester)
+                            .padding(top = 2.dp, bottom = 6.dp),
+                        // Don't attach the focus requester to the top chip when we have a deep
+                        // restore target — otherwise focus restore would land here instead of the
+                        // movie card the user came back to.
+                        firstItemFocusRequester = if (restoreTargetId == null) initialFocusRequester else null,
                     )
                 }
                 if (continueWatching.isNotEmpty()) {
                     item(key = "continue_watching") {
                         ContinueWatchingRow(
                             items = continueWatching,
-                            onItemClick = onContinueWatchingPlay
+                            onItemClick = onContinueWatchingPlay,
+                            onItemLongClick = onRemoveContinueWatching
                         )
                     }
                 }

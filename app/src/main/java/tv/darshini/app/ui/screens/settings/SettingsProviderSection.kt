@@ -31,6 +31,7 @@ import tv.darshini.app.ui.theme.OnSurfaceDim
 import tv.darshini.app.ui.theme.Primary
 import tv.darshini.domain.model.Provider
 import tv.darshini.domain.model.ProviderType
+import tv.darshini.domain.model.SyncCadence
 
 internal fun LazyListScope.providerSection(
     uiState: SettingsUiState,
@@ -181,4 +182,46 @@ internal fun LazyListScope.providerSection(
             }
         }
     }
+
+    item {
+        Spacer(modifier = Modifier.height(18.dp))
+        Text(
+            text = stringResource(R.string.settings_sync_cadence_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = OnSurfaceDim,
+            modifier = Modifier.padding(bottom = 10.dp)
+        )
+        var showCadenceDialog by rememberSaveable { mutableStateOf(false) }
+        ClickableSettingsRow(
+            label = stringResource(R.string.settings_sync_cadence_label),
+            value = stringResource(syncCadenceLabelRes(uiState.providerSyncCadence)),
+            onClick = { showCadenceDialog = true }
+        )
+        if (showCadenceDialog) {
+            PremiumSelectionDialog(
+                title = stringResource(R.string.settings_sync_cadence_label),
+                onDismiss = { showCadenceDialog = false }
+            ) {
+                SyncCadence.entries.forEach { cadence ->
+                    LevelOption(
+                        level = cadence.ordinal,
+                        text = stringResource(syncCadenceLabelRes(cadence)),
+                        currentLevel = uiState.providerSyncCadence.ordinal,
+                        onSelect = {
+                            viewModel.setProviderSyncCadence(cadence)
+                            showCadenceDialog = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun syncCadenceLabelRes(cadence: SyncCadence): Int = when (cadence) {
+    SyncCadence.EVERY_LAUNCH -> R.string.settings_sync_cadence_every_launch
+    SyncCadence.EVERY_1_DAY -> R.string.settings_sync_cadence_1_day
+    SyncCadence.EVERY_2_DAYS -> R.string.settings_sync_cadence_2_days
+    SyncCadence.EVERY_3_DAYS -> R.string.settings_sync_cadence_3_days
+    SyncCadence.MANUAL -> R.string.settings_sync_cadence_manual
 }
