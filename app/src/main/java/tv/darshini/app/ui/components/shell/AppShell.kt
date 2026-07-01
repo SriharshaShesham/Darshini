@@ -975,44 +975,50 @@ private fun DestinationRail(
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Row(
+            TvClickableSurface(
+                onClick = onToggleExpanded,
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TvIconButton(
-                    onClick = onToggleExpanded,
-                    colors = androidx.tv.material3.IconButtonDefaults.colors(
-                        containerColor = Color.Transparent,
-                        focusedContainerColor = AppColors.SurfaceEmphasis,
-                        contentColor = AppColors.TextSecondary,
-                        focusedContentColor = AppColors.TextPrimary
-                    ),
-                    border = androidx.tv.material3.IconButtonDefaults.border(
-                        focusedBorder = Border(
-                            border = BorderStroke(FocusSpec.BorderWidth, AppColors.Focus),
-                            shape = RoundedCornerShape(14.dp)
-                        )
+                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                colors = ClickableSurfaceDefaults.colors(
+                    containerColor = Color.Transparent,
+                    focusedContainerColor = AppColors.SurfaceEmphasis
+                ),
+                border = ClickableSurfaceDefaults.border(
+                    focusedBorder = Border(
+                        border = BorderStroke(FocusSpec.BorderWidth, AppColors.Focus),
+                        shape = RoundedCornerShape(12.dp)
                     )
+                ),
+                cornerRadius = 12.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(if (isExpanded) 12.dp else 8.dp))
                     Icon(
                         imageVector = Icons.Default.Menu,
                         contentDescription = if (isExpanded) "Collapse sidebar" else "Expand sidebar",
-                        modifier = Modifier.size(20.dp)
+                        tint = AppColors.TextSecondary,
+                        modifier = Modifier.size(24.dp)
                     )
-                }
-                if (isExpanded) {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Column {
-                        Text(
-                            text = stringResource(R.string.app_name),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = AppColors.TextPrimary
-                        )
-                        Text(
-                            text = stringResource(R.string.label_tv),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = AppColors.TextTertiary
-                        )
+                    if (isExpanded) {
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = stringResource(R.string.app_name),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = AppColors.TextPrimary
+                            )
+                            Text(
+                                text = stringResource(R.string.label_tv),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = AppColors.TextTertiary
+                            )
+                        }
                     }
                 }
             }

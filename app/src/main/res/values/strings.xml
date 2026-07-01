@@ -329,6 +329,13 @@
     <string name="settings_providers">Providers</string>
     <string name="settings_no_providers">No providers configured</string>
     <string name="settings_add_provider">Add Provider</string>
+    <string name="settings_sync_cadence_title">Automatic sync</string>
+    <string name="settings_sync_cadence_label">Refresh content on launch</string>
+    <string name="settings_sync_cadence_every_launch">Every launch</string>
+    <string name="settings_sync_cadence_1_day">Every day</string>
+    <string name="settings_sync_cadence_2_days">Every 2 days</string>
+    <string name="settings_sync_cadence_3_days">Every 3 days</string>
+    <string name="settings_sync_cadence_manual">Manual only</string>
     <string name="settings_providers_subtitle">Switch, sync, edit, and troubleshoot your IPTV sources.</string>
     <string name="settings_provider_selector_hint">Select a provider to view details and actions.</string>
     <string name="settings_parental_control">Parental Control</string>
@@ -1180,6 +1187,7 @@
     <string name="player_recording_badge">Recording</string>
     <string name="player_recording_scheduled_badge">Scheduled</string>
     <string name="player_subs">Subs</string>
+    <string name="player_subs_off">Off</string>
     <string name="player_audio">Audio</string>
     <string name="player_action_mute">Mute</string>
     <string name="player_action_cast">Cast</string>

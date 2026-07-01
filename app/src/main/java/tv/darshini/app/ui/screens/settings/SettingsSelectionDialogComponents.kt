@@ -1,0 +1,196 @@
+package tv.darshini.app.ui.screens.settings
+
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.RadioButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.Center
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import tv.darshini.app.ui.interaction.mouseClickable
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import tv.darshini.app.R
+import tv.darshini.app.ui.components.dialogs.rememberDialogOpenGestureBlocker
+import tv.darshini.app.ui.interaction.TvClickableSurface
+import tv.darshini.app.ui.theme.DialogBackground
+import tv.darshini.app.ui.theme.OnBackground
+import tv.darshini.app.ui.theme.OnSurfaceDim
+import tv.darshini.app.ui.theme.Primary
+
+@Composable
+internal fun PremiumSelectionDialog(
+    title: String,
+    onDismiss: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val isTelevisionDevice = tv.darshini.app.device.rememberIsTelevisionDevice()
+    var canInteract by remember { mutableStateOf(false) }
+    val blockOpenGesture = rememberDialogOpenGestureBlocker(canInteract)
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(500)
+        canInteract = true
+    }
+    Dialog(onDismissRequest = { if (canInteract) onDismiss() }) {
+        val dialogContent: @Composable (Modifier) -> Unit = { resolvedModifier ->
+            androidx.compose.material3.Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = DialogBackground,
+                modifier = resolvedModifier
+                    .border(1.dp, Primary.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                    .onPreviewKeyEvent(blockOpenGesture)
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Primary
+                    )
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .padding(vertical = 8.dp)
+                            .verticalScroll(rememberScrollState())
+                            .padding(vertical = 8.dp)
+                    ) {
+                        content()
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        val cancelInteractionSource = remember { MutableInteractionSource() }
+                        val isCancelFocused by cancelInteractionSource.collectIsFocusedAsState()
+                        val colorsPalette = tv.darshini.app.ui.design.LocalAppColors.current
+                        TvClickableSurface(
+                            onClick = { if (canInteract) onDismiss() },
+                            cornerRadius = 6.dp,
+                            colors = ClickableSurfaceDefaults.colors(
+                                containerColor = Primary.copy(alpha = 0.2f),
+                                focusedContainerColor = Primary.copy(alpha = 0.4f)
+                            ),
+                            interactionSource = cancelInteractionSource,
+                            modifier = Modifier
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_cancel),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (isCancelFocused) colorsPalette.textPrimary else Primary,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (isTelevisionDevice) {
+            dialogContent(Modifier.fillMaxWidth(0.62f))
+        } else {
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Center
+            ) {
+                val dialogWidthFraction = when {
+                    maxWidth < 700.dp -> 0.92f
+                    maxWidth < 1000.dp -> 0.78f
+                    else -> 0.62f
+                }
+                dialogContent(Modifier.fillMaxWidth(dialogWidthFraction))
+            }
+        }
+    }
+}
+
+@Composable
+internal fun LevelOption(
+    level: Int,
+    text: String,
+    currentLevel: Int,
+    subtitle: String? = null,
+    onSelect: () -> Unit
+) {
+    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val colorsPalette = tv.darshini.app.ui.design.LocalAppColors.current
+    val isSelected = level == currentLevel
+    TvClickableSurface(
+        onClick = onSelect,
+        cornerRadius = 8.dp,
+        interactionSource = interactionSource,
+        modifier = Modifier
+            .fillMaxWidth()
+            .focusRequester(focusRequester)
+            .mouseClickable(focusRequester = focusRequester, onClick = onSelect)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(
+                selected = isSelected,
+                onClick = null,
+                colors = androidx.compose.material3.RadioButtonDefaults.colors(
+                    selectedColor = Primary,
+                    unselectedColor = colorsPalette.textSecondary
+                )
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            val titleColor = when {
+                isFocused -> colorsPalette.textPrimary
+                isSelected -> Primary
+                else -> colorsPalette.textSecondary
+            }
+            val descColor = when {
+                isFocused -> colorsPalette.textSecondary
+                else -> colorsPalette.textTertiary
+            }
+            if (subtitle != null) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(text, style = MaterialTheme.typography.titleSmall, color = titleColor)
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = descColor)
+                }
+            } else {
+                Text(text, style = MaterialTheme.typography.bodyMedium, color = titleColor)
+            }
+        }
+    }
+}
+

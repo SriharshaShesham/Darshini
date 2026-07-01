@@ -42,7 +42,7 @@
 -keep class * implements com.google.gson.JsonSerializer
 -keep class * implements com.google.gson.JsonDeserializer
 # Keep fields that GSON accesses via reflection
--keepclassmembers class com.streamvault.data.remote.** { <fields>; }
+-keepclassmembers class tv.darshini.data.remote.** { <fields>; }
 
 # ── Room ────────────────────────────────────────────────────
 -keep class * extends androidx.room.RoomDatabase
@@ -50,13 +50,13 @@
 -dontwarn androidx.room.paging.**
 
 # ── Domain models (serialized by GSON / passed across modules) ──
--keep class com.streamvault.domain.model.** { *; }
--keep class com.streamvault.data.local.entity.** { *; }
--keep class com.streamvault.data.remote.xtream.model.** { *; }
+-keep class tv.darshini.domain.model.** { *; }
+-keep class tv.darshini.data.local.entity.** { *; }
+-keep class tv.darshini.data.remote.xtream.model.** { *; }
 
 # ── Security / TLS ──────────────────────────────────────────
--keepnames class com.streamvault.data.security.CredentialCrypto
--keepclassmembers class com.streamvault.data.security.CredentialCrypto {
+-keepnames class tv.darshini.data.security.CredentialCrypto
+-keepclassmembers class tv.darshini.data.security.CredentialCrypto {
     <fields>;
     <methods>;
 }

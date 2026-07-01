@@ -54,6 +54,7 @@ import tv.darshini.app.ui.theme.*
 import tv.darshini.domain.model.Category
 import tv.darshini.domain.model.LibraryFilterType
 import tv.darshini.domain.model.LibrarySortBy
+import tv.darshini.domain.model.PlaybackHistory
 import tv.darshini.domain.model.Series
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
@@ -122,6 +123,27 @@ fun SeriesScreen(
 
     BackHandler(enabled = uiState.selectedCategory != null && !uiState.isReorderMode) {
         viewModel.selectCategory(null)
+    }
+
+    // Whenever selectedCategory changes (null→non-null entering category detail, or non-null→null
+    // returning to preview), the currently-focused element is removed from the composition tree.
+    // Compose TV's fallback focus search then finds the first focusable node — the sidebar hamburger.
+    // ON_RESUME never fires for in-screen transitions, so FocusRestoreHost can't help here.
+    // Retry focus at increasing intervals: back-to-preview requires focus to reach a chip inside
+    // LazyRow inside a LazyColumn item — more nesting than entering category detail — so the first
+    // attempt may silently fail while inner lazy items are still being laid out.
+    var previousSelectedCategory by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(uiState.selectedCategory) {
+        val prev = previousSelectedCategory
+        previousSelectedCategory = uiState.selectedCategory
+        if (prev != uiState.selectedCategory) {
+            var focused = false
+            for (delayMs in longArrayOf(80L, 150L, 250L, 400L)) {
+                delay(delayMs)
+                focused = initialContentFocusRequester.requestFocusSafely(tag = "SeriesScreen", target = "Category transition")
+                if (focused) break
+            }
+        }
     }
 
     ProtectedVodPinDialog(
@@ -225,8 +247,12 @@ fun SeriesScreen(
                 onSelectedSortByChange = viewModel::setSelectedLibrarySortBy,
                 searchQuery = uiState.searchQuery,
                 onSearchQueryChange = viewModel::setSearchQuery,
-                onSeriesClick = onSeriesClick,
+                onSeriesClick = { series ->
+                    viewModel.rememberFocusedSeries(series.id)
+                    onSeriesClick(series)
+                },
                 onSeriesIdClick = onSeriesIdClick,
+                onRemoveContinueWatching = viewModel::removeFromContinueWatching,
                 onProtectedSeriesClick = { series ->
                     pendingCategory = null
                     pendingSeries = series
@@ -345,6 +371,7 @@ private fun SeriesVodContent(
     onSearchQueryChange: (String) -> Unit,
     onSeriesClick: (Series) -> Unit,
     onSeriesIdClick: (Long) -> Unit,
+    onRemoveContinueWatching: (PlaybackHistory) -> Unit,
     onProtectedSeriesClick: (Series) -> Unit,
     onProtectedCategoryClick: (Category) -> Unit,
     onShowDialog: (Series) -> Unit,
@@ -445,7 +472,12 @@ private fun SeriesVodContent(
             }
             .toList()
     }
-    val fallbackSeriesId = favoriteSeries.firstOrNull()?.id
+    // Restore focus to the series the user opened on back-nav — see MoviesScreen.
+    val restoreTargetId = uiState.lastFocusedSeriesId?.takeIf { id ->
+        catEntries.any { entry -> entry.value.any { it.id == id } }
+    }
+    val fallbackSeriesId = restoreTargetId
+        ?: favoriteSeries.firstOrNull()?.id
         ?: freshSeries.firstOrNull()?.id
         ?: topRatedSeries.firstOrNull()?.id
         ?: catEntries.firstOrNull()?.value?.firstOrNull()?.id
@@ -572,8 +604,8 @@ private fun SeriesVodContent(
                             }
                         },
                         modifier = Modifier
-                            .padding(top = 2.dp, bottom = 6.dp)
-                            .focusRequester(initialFocusRequester)
+                            .padding(top = 2.dp, bottom = 6.dp),
+                        firstItemFocusRequester = if (restoreTargetId == null) initialFocusRequester else null,
                     )
                 }
                 if (continueWatching.isNotEmpty()) {
@@ -590,7 +622,8 @@ private fun SeriesVodContent(
                                 } else {
                                     onSeriesIdClick(rawSeriesId)
                                 }
-                            }
+                            },
+                            onItemLongClick = onRemoveContinueWatching
                         )
                     }
                 }
