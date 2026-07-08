@@ -14,17 +14,35 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.delay
 
 private const val FOCUS_TAG = "FocusHelpers"
 
 fun FocusRequester.requestFocusSafely(tag: String = FOCUS_TAG, target: String = "Focus target"): Boolean {
     return try {
         requestFocus()
+        Log.d(tag, "$target focus request succeeded")
         true
     } catch (e: IllegalStateException) {
         Log.d(tag, "$target focus request failed: ${e.message}")
         false
     }
+}
+
+// requestFocus() fails while the target node is still being composed/laid out (lazy items
+// especially). Retry on a short ladder instead of a single shot so restoration survives
+// a few frames of layout latency.
+suspend fun FocusRequester.requestFocusWithRetries(
+    tag: String = FOCUS_TAG,
+    target: String = "Focus target",
+    delaysMs: LongArray = longArrayOf(50L, 100L, 200L, 400L)
+): Boolean {
+    for (delayMs in delaysMs) {
+        delay(delayMs)
+        if (requestFocusSafely(tag = tag, target = target)) return true
+    }
+    Log.d(tag, "$target focus request FAILED after all retries")
+    return false
 }
 
 @Composable

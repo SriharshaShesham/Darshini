@@ -54,6 +54,7 @@ data class SettingsUiState(
     val activeProviderId: Long? = null,
     val activeLiveSource: ActiveLiveSource? = null,
     val isSyncing: Boolean = false,
+    val syncOverlayDismissed: Boolean = false,
     val syncProgress: String? = null,
     val syncingProviderName: String? = null,
     val userMessage: String? = null,

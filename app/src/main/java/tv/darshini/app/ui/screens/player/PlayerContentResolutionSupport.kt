@@ -16,6 +16,7 @@ import tv.darshini.domain.repository.SeriesRepository
 internal data class SeriesEpisodeResolution(
     val resolvedEpisode: Episode?,
     val nextEpisode: Episode?,
+    val previousEpisode: Episode?,
     val resolvedArtworkUrl: String?,
     val resolvedTitle: String?,
     val resolvedSeasonNumber: Int?,
@@ -52,6 +53,7 @@ internal fun buildSeriesEpisodeResolution(
     return SeriesEpisodeResolution(
         resolvedEpisode = resolvedEpisode,
         nextEpisode = resolvedEpisode?.let { findNextEpisode(series, it) },
+        previousEpisode = resolvedEpisode?.let { findPreviousEpisode(series, it) },
         resolvedArtworkUrl = if (resolvedEpisode != null && currentContentType == ContentType.SERIES_EPISODE) {
             resolvedEpisode.coverUrl ?: currentArtworkUrl ?: series.posterUrl ?: series.backdropUrl
         } else {

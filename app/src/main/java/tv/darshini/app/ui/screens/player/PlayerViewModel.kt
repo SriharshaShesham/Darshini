@@ -164,6 +164,8 @@ class PlayerViewModel @Inject constructor(
 
     private val _nextEpisode = MutableStateFlow<Episode?>(null)
     val nextEpisode: StateFlow<Episode?> = _nextEpisode.asStateFlow()
+    private val _previousEpisode = MutableStateFlow<Episode?>(null)
+    val previousEpisode: StateFlow<Episode?> = _previousEpisode.asStateFlow()
 
     internal val _autoPlayCountdown = MutableStateFlow<AutoPlayCountdownUiState?>(null)
     val autoPlayCountdown: StateFlow<AutoPlayCountdownUiState?> = _autoPlayCountdown.asStateFlow()
@@ -283,7 +285,7 @@ class PlayerViewModel @Inject constructor(
             rebuildChannelNumberIndex()
         }
     internal var activeEpgRequestKey: EpgRequestKey? = null
-    internal var playerControlsTimeoutMs: Long = 5_000L
+    internal var playerControlsTimeoutMs: Long = 8_000L
     internal var liveOverlayTimeoutMs: Long = 4_000L
     internal var playerNoticeTimeoutMs: Long = 6_000L
     internal var diagnosticsTimeoutMs: Long = 15_000L
@@ -568,6 +570,14 @@ class PlayerViewModel @Inject constructor(
                 liveOverlayTimeoutMs = timeouts.liveOverlayMs
                 playerNoticeTimeoutMs = timeouts.noticeMs
                 diagnosticsTimeoutMs = timeouts.diagnosticsMs
+            }
+        }
+        viewModelScope.launch {
+            // Keep controls up while paused; resume playback re-arms the auto-hide countdown.
+            mainPlayerEngine.isPlaying.collect { playing ->
+                if (showControlsFlow.value) {
+                    if (playing) hideControlsAfterDelay() else cancelControlsAutoHide()
+                }
             }
         }
         viewModelScope.launch {
@@ -1043,6 +1053,7 @@ class PlayerViewModel @Inject constructor(
         _currentSeries.value = null
         _currentEpisode.value = null
         _nextEpisode.value = null
+        _previousEpisode.value = null
         cancelAutoPlay()
     }
 
@@ -1069,6 +1080,7 @@ class PlayerViewModel @Inject constructor(
                 _currentSeries.value = series
                 _currentEpisode.value = resolution.resolvedEpisode
                 _nextEpisode.value = resolution.nextEpisode
+                _previousEpisode.value = resolution.previousEpisode
                 currentSeriesId = seriesId
                 currentSeasonNumber = resolution.resolvedSeasonNumber
                 currentEpisodeNumber = resolution.resolvedEpisodeNumber
@@ -1090,6 +1102,7 @@ class PlayerViewModel @Inject constructor(
                 _currentSeries.value = null
                 _currentEpisode.value = null
                 _nextEpisode.value = null
+                _previousEpisode.value = null
                 currentSeriesId = seriesId
                 currentSeasonNumber = seasonNumber
                 currentEpisodeNumber = episodeNumber

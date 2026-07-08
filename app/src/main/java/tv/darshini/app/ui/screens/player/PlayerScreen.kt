@@ -1,6 +1,7 @@
 package tv.darshini.app.ui.screens.player
 
 import android.app.Activity
+import android.util.Log
 import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
@@ -176,6 +177,7 @@ fun PlayerScreen(
     val currentSeries by viewModel.currentSeries.collectAsStateWithLifecycle()
     val currentEpisode by viewModel.currentEpisode.collectAsStateWithLifecycle()
     val nextEpisode by viewModel.nextEpisode.collectAsStateWithLifecycle()
+    val previousEpisode by viewModel.previousEpisode.collectAsStateWithLifecycle()
     val autoPlayCountdown by viewModel.autoPlayCountdown.collectAsStateWithLifecycle()
     val playbackTitle by viewModel.playbackTitle.collectAsStateWithLifecycle()
     val resumePrompt by viewModel.resumePrompt.collectAsStateWithLifecycle()
@@ -245,6 +247,9 @@ fun PlayerScreen(
     val categoryListFocusRequester = remember { FocusRequester() }
     val playButtonFocusRequester = remember { FocusRequester() }
     val quickActionsFocusRequester = remember { FocusRequester() }
+    // True while a bottom control-bar button is focused. Lets DPAD LEFT/RIGHT move focus between
+    // the buttons instead of seeking (seek still applies when the seek bar is focused / hidden).
+    var controlsRowFocused by remember { mutableStateOf(false) }
     val channelInfoFocusRequester = remember { FocusRequester() }
     val layoutDirection = LocalLayoutDirection.current
     val isRtl = layoutDirection == LayoutDirection.Rtl
@@ -592,11 +597,23 @@ fun PlayerScreen(
                 // Handles both ACTION_DOWN (start seek + hold-repeat) and ACTION_UP (stop repeat).
                 if (contentType != "LIVE" || isCatchUpPlayback) {
                     val kc = event.nativeKeyEvent.keyCode
+                    if (kc == KeyEvent.KEYCODE_DPAD_LEFT || kc == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                        Log.d(
+                            "SeekDbg",
+                            "GLOBAL preview kc=$kc action=${event.nativeKeyEvent.action} " +
+                                "showControls=$showControls contentType=$contentType isCatchUp=$isCatchUpPlayback " +
+                                "track=${showTrackSelection != null} speed=$showSpeedSelection " +
+                                "avOffset=$showAudioVideoOffsetDialog stopTimer=$showStopPlaybackTimerDialog " +
+                                "idleTimer=$showIdleStandbyTimerDialog episodePicker=$showEpisodePicker"
+                        )
+                    }
                     if ((kc == KeyEvent.KEYCODE_DPAD_LEFT || kc == KeyEvent.KEYCODE_DPAD_RIGHT) &&
                         showTrackSelection == null && !showSpeedSelection &&
                         !showAudioVideoOffsetDialog && !showStopPlaybackTimerDialog &&
-                        !showIdleStandbyTimerDialog && !showEpisodePicker
+                        !showIdleStandbyTimerDialog && !showEpisodePicker &&
+                        !showControls
                     ) {
+                        Log.d("SeekDbg", "GLOBAL seek FIRES kc=$kc action=${event.nativeKeyEvent.action}")
                         val forward = (kc == KeyEvent.KEYCODE_DPAD_RIGHT) != isRtl
                         when (event.nativeKeyEvent.action) {
                             KeyEvent.ACTION_DOWN -> {
@@ -767,6 +784,10 @@ fun PlayerScreen(
                             }
                         }
                         KeyEvent.KEYCODE_DPAD_LEFT -> {
+                            // VOD with controls visible: LEFT belongs to focus-nav between the
+                            // control buttons (or the seekbar's own handler when it's focused).
+                            // Seeking here would consume the event before focus can move.
+                            if (showControls && (contentType != "LIVE" || isCatchUpPlayback)) return@onKeyEvent false
                             if (showChannelListOverlay || showCategoryListOverlay || showEpgOverlay || showChannelInfoOverlay || showDiagnostics) {
                                 viewModel.onLiveOverlayInteraction()
                             }
@@ -785,6 +806,9 @@ fun PlayerScreen(
                             }
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            // VOD with controls visible: RIGHT belongs to focus-nav between the
+                            // control buttons (or the seekbar's own handler when it's focused).
+                            if (showControls && (contentType != "LIVE" || isCatchUpPlayback)) return@onKeyEvent false
                             if (showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay || showDiagnostics) {
                                 viewModel.onLiveOverlayInteraction()
                             }
@@ -1048,8 +1072,9 @@ fun PlayerScreen(
             timeshiftUiState = timeshiftUiState,
             playButtonFocusRequester = playButtonFocusRequester,
             quickActionsFocusRequester = quickActionsFocusRequester,
+            onControlsRowFocusChanged = { controlsRowFocused = it },
             modifier = Modifier.fillMaxSize(),
-            onClose = viewModel::toggleControls,
+            onClose = onBack,
             onTogglePlayPause = { if (isPlaying) viewModel.pause() else viewModel.play() },
             onSeekBackward = viewModel::seekBackward,
             onSeekForward = viewModel::seekForward,
@@ -1100,6 +1125,8 @@ fun PlayerScreen(
             onSeekPreviewPositionChanged = viewModel::updateSeekPreview,
             hasNextEpisode = nextEpisode != null,
             onPlayNextEpisode = viewModel::playNextEpisodeNow,
+            hasPreviousEpisode = previousEpisode != null,
+            onPlayPreviousEpisode = viewModel::playPreviousEpisodeNow,
             selectedAudioTrackName = selectedAudioTrackName,
             selectedSubtitleTrackName = selectedSubtitleTrackName,
             onUserInteraction = {
@@ -1123,10 +1150,10 @@ fun PlayerScreen(
 
         PlayerAspectRatioToast(
             aspectRatioLabel = aspectRatio.modeName,
-            controlsVisible = showControls,
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 32.dp)
+                // Drop below the top bar when controls are up so it doesn't overlap the title.
+                .padding(top = if (showControls) 140.dp else 32.dp)
         )
 
         PlayerResolutionBadge(
@@ -1476,6 +1503,7 @@ private fun PlayerControlsOverlayHost(
     timeshiftUiState: PlayerTimeshiftUiState,
     playButtonFocusRequester: FocusRequester,
     quickActionsFocusRequester: FocusRequester,
+    onControlsRowFocusChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     onClose: () -> Unit,
     onTogglePlayPause: () -> Unit,
@@ -1512,6 +1540,8 @@ private fun PlayerControlsOverlayHost(
     onSeekPreviewPositionChanged: (Long?) -> Unit,
     hasNextEpisode: Boolean = false,
     onPlayNextEpisode: () -> Unit = {},
+    hasPreviousEpisode: Boolean = false,
+    onPlayPreviousEpisode: () -> Unit = {},
     selectedAudioTrackName: String? = null,
     selectedSubtitleTrackName: String? = null,
     onUserInteraction: () -> Unit
@@ -1543,6 +1573,7 @@ private fun PlayerControlsOverlayHost(
         timeshiftUiState = timeshiftUiState,
         playButtonFocusRequester = playButtonFocusRequester,
         quickActionsFocusRequester = quickActionsFocusRequester,
+        onControlsRowFocusChanged = onControlsRowFocusChanged,
         modifier = modifier,
         onClose = onClose,
         onTogglePlayPause = onTogglePlayPause,
@@ -1579,6 +1610,8 @@ private fun PlayerControlsOverlayHost(
         onSeekPreviewPositionChanged = onSeekPreviewPositionChanged,
         hasNextEpisode = hasNextEpisode,
         onPlayNextEpisode = onPlayNextEpisode,
+        hasPreviousEpisode = hasPreviousEpisode,
+        onPlayPreviousEpisode = onPlayPreviousEpisode,
         selectedAudioTrackName = selectedAudioTrackName,
         selectedSubtitleTrackName = selectedSubtitleTrackName,
         onUserInteraction = onUserInteraction
@@ -1588,10 +1621,15 @@ private fun PlayerControlsOverlayHost(
 @Composable
 private fun SeekFeedbackOverlay(forward: Boolean?, trigger: Int) {
     var visible by remember { mutableStateOf(false) }
+    // Accumulate while seeks keep coming; reset once the overlay has faded (a real gap).
+    var seconds by remember { mutableIntStateOf(0) }
+    var lastForward by remember { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(trigger) {
         if (trigger > 0) {
+            seconds = if (visible && lastForward == forward) seconds + 10 else 10
+            lastForward = forward
             visible = true
-            delay(700)
+            delay(900)
             visible = false
         }
     }
@@ -1611,9 +1649,9 @@ private fun SeekFeedbackOverlay(forward: Boolean?, trigger: Int) {
                     .padding(horizontal = 20.dp, vertical = 14.dp)
             ) {
                 Text(
-                    text = if (forward) "⏩  10s" else "10s  ⏪",
+                    text = if (forward) "»  ${seconds}s" else "${seconds}s  «",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White,
+                    color = AccentCyan,
                     fontWeight = FontWeight.Bold
                 )
             }

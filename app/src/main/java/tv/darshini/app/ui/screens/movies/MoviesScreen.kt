@@ -87,12 +87,13 @@ import tv.darshini.app.ui.components.shell.VodHeroStrip
 import tv.darshini.app.ui.components.shell.VodSectionHeader
 import tv.darshini.app.ui.design.FocusRestoreHost
 import tv.darshini.app.ui.design.requestFocusSafely
+import tv.darshini.app.ui.design.requestFocusWithRetries
+import kotlinx.coroutines.flow.first
 import tv.darshini.app.ui.model.VodViewMode
 import tv.darshini.app.ui.screens.vod.HandleVodUserMessage
 import tv.darshini.app.ui.screens.vod.ProtectedVodPinDialog
 import tv.darshini.app.ui.screens.vod.VodBrowseDefaults
 import tv.darshini.app.ui.screens.vod.vodActiveFilterSortDetail
-import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -129,20 +130,17 @@ fun MoviesScreen(
     // returning to preview), the currently-focused element is removed from the composition tree.
     // Compose TV's fallback focus search then finds the first focusable node — the sidebar hamburger.
     // ON_RESUME never fires for in-screen transitions, so FocusRestoreHost can't help here.
-    // Retry focus at increasing intervals: back-to-preview requires focus to reach a chip inside
-    // LazyRow inside a LazyColumn item — more nesting than entering category detail — so the first
-    // attempt may silently fail while inner lazy items are still being laid out.
+    // Category items load async: wait for the data to actually arrive before requesting focus,
+    // instead of racing it with a fixed wall-clock ladder that a slow DB load can outlast.
     var previousSelectedCategory by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(uiState.selectedCategory) {
         val prev = previousSelectedCategory
         previousSelectedCategory = uiState.selectedCategory
         if (prev != uiState.selectedCategory) {
-            var focused = false
-            for (delayMs in longArrayOf(80L, 150L, 250L, 400L)) {
-                delay(delayMs)
-                focused = initialContentFocusRequester.requestFocusSafely(tag = "MoviesScreen", target = "Category transition")
-                if (focused) break
-            }
+            android.util.Log.d("FocusDebug", "Category transition $prev -> ${uiState.selectedCategory}, waiting for data")
+            snapshotFlow { uiState.selectedCategory == null || !uiState.isLoadingSelectedCategory }.first { it }
+            android.util.Log.d("FocusDebug", "Data ready (items=${uiState.selectedCategoryItems.size}), requesting focus")
+            initialContentFocusRequester.requestFocusWithRetries(tag = "FocusDebug", target = "Category transition")
         }
     }
 
@@ -172,8 +170,7 @@ fun MoviesScreen(
         FocusRestoreHost(
             enabled = !uiState.isLoading && uiState.errorMessage == null,
             onRestore = {
-                delay(100)
-                initialContentFocusRequester.requestFocusSafely(tag = "MoviesScreen", target = "Initial movies content")
+                initialContentFocusRequester.requestFocusWithRetries(tag = "MoviesScreen", target = "Initial movies content")
             }
         ) {
         AppScreenScaffold(
@@ -480,11 +477,6 @@ private fun MoviesVodContent(
     val restoreTargetId = uiState.lastFocusedMovieId?.takeIf { id ->
         catEntries.any { entry -> entry.value.any { it.id == id } }
     }
-    val fallbackMovieId = restoreTargetId
-        ?: favoriteMovies.firstOrNull()?.id
-        ?: freshMovies.firstOrNull()?.id
-        ?: topRatedMovies.firstOrNull()?.id
-        ?: catEntries.firstOrNull()?.value?.firstOrNull()?.id
     val categoryOptions = remember(visibleCategoryNames, uiState.categoryCounts, categoryByName, uiState.parentalControlLevel, uiState.unlockedCategoryIds) {
         visibleCategoryNames.map { name ->
             val matchedCategory = categoryByName[name]
@@ -740,9 +732,11 @@ private fun MoviesVodContent(
                             movie = movie,
                             isLocked = isLocked,
                             onClick = { if (isLocked) onProtectedMovieClick(movie) else onMovieClick(movie) },
-                            onLongClick = { onShowDialog(movie) }
-                            ,
-                            modifier = if (movie.id == fallbackMovieId) Modifier.focusRequester(initialFocusRequester) else Modifier
+                            onLongClick = { onShowDialog(movie) },
+                            // Only the deep-restore target carries the requester here; when there is
+                            // no restore target the requester lives on the top action chip instead.
+                            // Attaching it to both nodes at once is undefined behavior.
+                            modifier = if (restoreTargetId != null && movie.id == restoreTargetId) Modifier.focusRequester(initialFocusRequester) else Modifier
                         )
                     }
                 }
@@ -783,7 +777,9 @@ private fun MoviesVodContent(
     var draggingMovie by remember { mutableStateOf<Movie?>(null) }
     var showBrowseOptions by rememberSaveable(uiState.selectedCategory) { mutableStateOf(false) }
     var showSearchBar by rememberSaveable(uiState.selectedCategory) { mutableStateOf(searchQuery.isNotBlank()) }
-    val initialGridMovieId = filteredGridMovies.firstOrNull()?.id
+    // Restore focus to the movie the user opened when returning from detail; first item otherwise.
+    val initialGridMovieId = uiState.lastFocusedMovieId?.takeIf { id -> filteredGridMovies.any { it.id == id } }
+        ?: filteredGridMovies.firstOrNull()?.id
 
     if (showBrowseOptions) {
         VodBrowseOptionsDialog(
@@ -804,7 +800,14 @@ private fun MoviesVodContent(
         )
     }
 
-    val modernGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    // Saveable so the grid's scroll position survives back-navigation from detail — otherwise the
+    // restore-target card may not be composed and the focus request silently fails.
+    val modernGridState = rememberSaveable(
+        uiState.selectedCategory,
+        saver = androidx.compose.foundation.lazy.grid.LazyGridState.Saver
+    ) {
+        androidx.compose.foundation.lazy.grid.LazyGridState()
+    }
     InfiniteScrollEffect(
         gridState = modernGridState,
         enabled = !uiState.isReorderMode,
@@ -858,7 +861,10 @@ private fun MoviesVodContent(
             }
         }
 
-        if (uiState.isLoadingSelectedCategory) {
+        // Show the spinner only when there is nothing to render yet. Replacing an already-populated
+        // grid with a spinner (e.g. during a sync re-load) disposes the focused card and drops
+        // focus onto the sidebar hamburger.
+        if (uiState.isLoadingSelectedCategory && filteredGridMovies.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Box(
                     modifier = Modifier
@@ -1019,7 +1025,9 @@ private fun MoviesVodClassicContent(
         if (uiState.isReorderMode) uiState.filteredMovies else baseMovies
     }
     var draggingMovie by remember { mutableStateOf<Movie?>(null) }
-    val initialGridMovieId = filteredGridMovies.firstOrNull()?.id
+    // Restore focus to the movie the user opened when returning from detail; first item otherwise.
+    val initialGridMovieId = uiState.lastFocusedMovieId?.takeIf { id -> filteredGridMovies.any { it.id == id } }
+        ?: filteredGridMovies.firstOrNull()?.id
 
     LaunchedEffect(uiState.vodViewMode, uiState.selectedCategory, uiState.isReorderMode) {
         if (uiState.vodViewMode == VodViewMode.CLASSIC && uiState.selectedCategory == null && !uiState.isReorderMode) {
@@ -1188,7 +1196,12 @@ private fun MoviesVodClassicContent(
                 )
             }
 
-            val classicGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+            val classicGridState = rememberSaveable(
+                uiState.selectedCategory,
+                saver = androidx.compose.foundation.lazy.grid.LazyGridState.Saver
+            ) {
+                androidx.compose.foundation.lazy.grid.LazyGridState()
+            }
             InfiniteScrollEffect(
                 gridState = classicGridState,
                 enabled = !uiState.isReorderMode,
@@ -1215,7 +1228,7 @@ private fun MoviesVodClassicContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                if (uiState.isLoadingSelectedCategory) {
+                if (uiState.isLoadingSelectedCategory && filteredGridMovies.isEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         Box(
                             modifier = Modifier

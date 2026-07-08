@@ -33,6 +33,20 @@ internal fun findNextEpisode(series: Series, episode: Episode): Episode? {
     return orderedEpisodes.getOrNull(currentIndex + 1)
 }
 
+internal fun findPreviousEpisode(series: Series, episode: Episode): Episode? {
+    val orderedEpisodes = series.seasons
+        .sanitizedForPlayer()
+        .sortedBy { it.seasonNumber }
+        .flatMap { season -> season.episodes.sortedBy { it.episodeNumber } }
+    val currentIndex = orderedEpisodes.indexOfFirst {
+        it.id == episode.id ||
+            it.playbackEpisodeIdentity() == episode.playbackEpisodeIdentity() ||
+            (it.seasonNumber == episode.seasonNumber && it.episodeNumber == episode.episodeNumber)
+    }
+    if (currentIndex <= 0) return null
+    return orderedEpisodes.getOrNull(currentIndex - 1)
+}
+
 internal fun Episode.playbackEpisodeIdentity(): Long =
     episodeId.takeIf { it > 0L } ?: id
 

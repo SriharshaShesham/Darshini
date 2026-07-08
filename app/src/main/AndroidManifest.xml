@@ -66,6 +66,7 @@
             android:launchMode="singleTask"
             android:supportsPictureInPicture="true"
             android:screenOrientation="landscape"
+            android:theme="@style/Theme.StreamVault.Starting"
             android:windowSoftInputMode="adjustResize">
 
             <intent-filter>

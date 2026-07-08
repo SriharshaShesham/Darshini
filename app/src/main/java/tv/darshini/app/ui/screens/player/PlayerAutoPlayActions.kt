@@ -69,3 +69,9 @@ fun PlayerViewModel.playNextEpisodeNow() {
     cancelAutoPlay()
     playEpisode(episode, showResumePrompt = false)
 }
+
+fun PlayerViewModel.playPreviousEpisodeNow() {
+    val episode = previousEpisode.value ?: return
+    cancelAutoPlay()
+    playEpisode(episode, showResumePrompt = false)
+}

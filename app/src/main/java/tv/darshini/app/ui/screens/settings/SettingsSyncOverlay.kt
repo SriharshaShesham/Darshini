@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,6 +31,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import tv.darshini.app.R
 import tv.darshini.app.ui.components.extractProgressFraction
+import tv.darshini.app.ui.interaction.TvButton
 import tv.darshini.app.ui.theme.OnSurface
 import tv.darshini.app.ui.theme.OnSurfaceDim
 import tv.darshini.app.ui.theme.Primary
@@ -38,14 +40,24 @@ import tv.darshini.app.ui.theme.Primary
 internal fun SyncingOverlay(
     isSyncing: Boolean,
     providerName: String? = null,
-    progress: String? = null
+    progress: String? = null,
+    onSyncInBackground: (() -> Unit)? = null
 ) {
     if (!isSyncing) return
 
     BackHandler(enabled = true) {}
 
     val overlayFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { overlayFocusRequester.requestFocus() }
+    val backgroundButtonFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(onSyncInBackground) {
+        // Focus the button directly when it's present so a single DPAD_CENTER/ENTER
+        // press activates it; otherwise fall back to the old block-everything behavior.
+        if (onSyncInBackground != null) {
+            backgroundButtonFocusRequester.requestFocus()
+        } else {
+            overlayFocusRequester.requestFocus()
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -98,6 +110,16 @@ internal fun SyncingOverlay(
                     style = MaterialTheme.typography.bodySmall,
                     color = OnSurfaceDim
                 )
+            }
+            if (onSyncInBackground != null) {
+                TvButton(
+                    onClick = onSyncInBackground,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .focusRequester(backgroundButtonFocusRequester)
+                ) {
+                    Text(text = stringResource(R.string.settings_sync_in_background))
+                }
             }
         }
     }

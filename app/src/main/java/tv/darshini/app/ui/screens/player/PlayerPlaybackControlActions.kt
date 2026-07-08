@@ -69,6 +69,7 @@ fun PlayerViewModel.toggleAspectRatio() {
         AspectRatio.ZOOM -> AspectRatio.FIT
     }
     _aspectRatio.value = nextRatio
+    android.util.Log.d("SeekDbg", "toggleAspectRatio -> $nextRatio (contentId=$currentContentId)")
 
     if (currentContentId != -1L) {
         viewModelScope.launch {
