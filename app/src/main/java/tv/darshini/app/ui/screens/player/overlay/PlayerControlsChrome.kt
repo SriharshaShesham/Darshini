@@ -1,5 +1,8 @@
 package tv.darshini.app.ui.screens.player.overlay
 
+import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -40,6 +43,18 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Hd
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.Cast
+import androidx.compose.material.icons.filled.CastConnected
+import androidx.compose.material.icons.filled.PictureInPictureAlt
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.PlaylistPlay
+import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.ui.focus.onFocusChanged
+import tv.darshini.app.ui.theme.AccentCyan
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
@@ -66,6 +81,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -131,6 +147,7 @@ fun PlayerControlsOverlay(
     timeshiftUiState: PlayerTimeshiftUiState = PlayerTimeshiftUiState(),
     playButtonFocusRequester: FocusRequester,
     quickActionsFocusRequester: FocusRequester = FocusRequester(),
+    onControlsRowFocusChanged: (Boolean) -> Unit = {},
     onClose: () -> Unit,
     onTogglePlayPause: () -> Unit,
     onSeekBackward: () -> Unit,
@@ -170,6 +187,8 @@ fun PlayerControlsOverlay(
     onUserInteraction: () -> Unit = {},
     hasNextEpisode: Boolean = false,
     onPlayNextEpisode: () -> Unit = {},
+    hasPreviousEpisode: Boolean = false,
+    onPlayPreviousEpisode: () -> Unit = {},
     selectedAudioTrackName: String? = null,
     selectedSubtitleTrackName: String? = null,
     modifier: Modifier = Modifier
@@ -228,6 +247,7 @@ fun PlayerControlsOverlay(
                 timeshiftUiState = timeshiftUiState,
                 playButtonFocusRequester = playButtonFocusRequester,
                 quickActionsFocusRequester = quickActionsFocusRequester,
+                onControlsRowFocusChanged = onControlsRowFocusChanged,
                 modifier = Modifier.align(Alignment.BottomCenter),
                 onRestartProgram = onRestartProgram,
                 onOpenArchive = onOpenArchive,
@@ -265,6 +285,8 @@ fun PlayerControlsOverlay(
                 onOpenExternalPlayer = onOpenExternalPlayer,
                 hasNextEpisode = hasNextEpisode,
                 onPlayNextEpisode = onPlayNextEpisode,
+                hasPreviousEpisode = hasPreviousEpisode,
+                onPlayPreviousEpisode = onPlayPreviousEpisode,
                 selectedAudioTrackName = selectedAudioTrackName,
                 selectedSubtitleTrackName = selectedSubtitleTrackName
             )
@@ -375,7 +397,6 @@ fun PlayerNumericInputOverlay(
 @Composable
 fun PlayerAspectRatioToast(
     aspectRatioLabel: String,
-    controlsVisible: Boolean,
     modifier: Modifier = Modifier
 ) {
     var show by remember { mutableStateOf(false) }
@@ -386,7 +407,7 @@ fun PlayerAspectRatioToast(
     }
 
     AnimatedVisibility(
-        visible = show && !controlsVisible,
+        visible = show,
         enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
         exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
         modifier = modifier
@@ -565,6 +586,7 @@ private fun PlayerBottomBar(
     timeshiftUiState: PlayerTimeshiftUiState,
     playButtonFocusRequester: FocusRequester,
     quickActionsFocusRequester: FocusRequester,
+    onControlsRowFocusChanged: (Boolean) -> Unit = {},
     onRestartProgram: () -> Unit,
     onOpenArchive: () -> Unit,
     onStartRecording: () -> Unit,
@@ -601,6 +623,8 @@ private fun PlayerBottomBar(
     onOpenExternalPlayer: () -> Unit,
     hasNextEpisode: Boolean = false,
     onPlayNextEpisode: () -> Unit = {},
+    hasPreviousEpisode: Boolean = false,
+    onPlayPreviousEpisode: () -> Unit = {},
     selectedAudioTrackName: String? = null,
     selectedSubtitleTrackName: String? = null,
     modifier: Modifier = Modifier
@@ -634,6 +658,7 @@ private fun PlayerBottomBar(
                 sleepTimerUiState = sleepTimerUiState,
                 playButtonFocusRequester = playButtonFocusRequester,
                 quickActionsFocusRequester = quickActionsFocusRequester,
+                onControlsRowFocusChanged = onControlsRowFocusChanged,
                 onSeekToPosition = onSeekToPosition,
                 onSetScrubbingMode = onSetScrubbingMode,
                 onToggleAspectRatio = onToggleAspectRatio,
@@ -661,6 +686,8 @@ private fun PlayerBottomBar(
                 onOpenExternalPlayer = onOpenExternalPlayer,
                 hasNextEpisode = hasNextEpisode,
                 onPlayNextEpisode = onPlayNextEpisode,
+                hasPreviousEpisode = hasPreviousEpisode,
+                onPlayPreviousEpisode = onPlayPreviousEpisode,
                 selectedAudioTrackName = selectedAudioTrackName,
                 selectedSubtitleTrackName = selectedSubtitleTrackName
             )
@@ -1018,6 +1045,7 @@ private fun PlayerVodInfo(
     audioVideoSyncEnabled: Boolean,
     playButtonFocusRequester: FocusRequester,
     quickActionsFocusRequester: FocusRequester,
+    onControlsRowFocusChanged: (Boolean) -> Unit = {},
     onSeekToPosition: (Long) -> Unit,
     onSetScrubbingMode: (Boolean) -> Unit,
     onToggleAspectRatio: () -> Unit,
@@ -1044,11 +1072,20 @@ private fun PlayerVodInfo(
     onOpenExternalPlayer: () -> Unit,
     hasNextEpisode: Boolean = false,
     onPlayNextEpisode: () -> Unit = {},
+    hasPreviousEpisode: Boolean = false,
+    onPlayPreviousEpisode: () -> Unit = {},
     selectedAudioTrackName: String? = null,
     selectedSubtitleTrackName: String? = null
 ) {
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     val isTelevisionDevice = rememberIsTelevisionDevice()
+    val context = LocalContext.current
+    // Many Android TV devices (and the emulator) lack PiP — hide the button rather than
+    // show a dead control.
+    val pipSupported = remember(context) {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+    }
     val compactControls = screenWidth < 700.dp
     val tabletControls = !isTelevisionDevice && screenWidth >= 700.dp && screenWidth < 1280.dp
 
@@ -1076,7 +1113,14 @@ private fun PlayerVodInfo(
     var showSettingsMenu by remember { mutableStateOf(false) }
 
     // Full-width progress bar (edge-to-edge; thumb kept off the screen edge with a tiny inset)
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .clip(RoundedCornerShape(26.dp))
+            .background(Color(0xFF12161F).copy(alpha = 0.82f))
+            .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 10.dp)
+    ) {
         // Seek preview card \u2014 floats at current slider position
         AnimatedVisibility(visible = seekPreview.visible) {
             val fraction = sliderValue.coerceIn(0f, 1f)
@@ -1124,78 +1168,191 @@ private fun PlayerVodInfo(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .focusRequester(playButtonFocusRequester)
-                .focusProperties { down = quickActionsFocusRequester }
+                .focusRequester(quickActionsFocusRequester)
+                .onFocusChanged { Log.d("SeekDbg", "SLIDER focus isFocused=${it.isFocused} hasFocus=${it.hasFocus}") }
+                .focusProperties { down = playButtonFocusRequester }
+                // Seek is owned by the seek bar: LEFT/RIGHT seek only while it is focused. The
+                // control row (Play/Pause) is the default focus, so LEFT/RIGHT there navigate
+                // between buttons natively. UP from the row reaches this bar; DOWN returns.
+                .onPreviewKeyEvent { event ->
+                    val kc = event.nativeKeyEvent.keyCode
+                    val isDown = event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN
+                    if (kc == android.view.KeyEvent.KEYCODE_DPAD_LEFT ||
+                        kc == android.view.KeyEvent.KEYCODE_DPAD_RIGHT ||
+                        kc == android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                    ) {
+                        Log.d("SeekDbg", "SLIDER preview kc=$kc action=${event.nativeKeyEvent.action}")
+                    }
+                    when (kc) {
+                        android.view.KeyEvent.KEYCODE_DPAD_LEFT -> { if (isDown) onSeekBackward(); true }
+                        android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> { if (isDown) onSeekForward(); true }
+                        android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            if (isDown) runCatching { playButtonFocusRequester.requestFocus() }
+                            true
+                        }
+                        else -> false
+                    }
+                }
                 .semantics { contentDescription = playbackLabel },
             enabled = duration > 0,
             colors = SliderDefaults.colors(
-                activeTrackColor = Primary,
-                thumbColor = Color.White,
+                activeTrackColor = AccentCyan,
+                thumbColor = AccentCyan,
                 inactiveTrackColor = Color.White.copy(alpha = 0.22f)
             )
         )
-    }
 
-    // ONE control row: [currentTime] [5 icon buttons] [totalDuration]
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 4.dp, start = 20.dp, end = 20.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = formatDuration(
-                if (isScrubbing && duration > 0) (sliderValue * duration).toLong()
-                else currentPosition
-            ),
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.White,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(modifier = Modifier.weight(1f))
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            PlayerBarIconButton(
-                icon = Icons.Default.ClosedCaption,
-                contentDescription = stringResource(R.string.player_subs),
-                onClick = onOpenSubtitleTracks,
-                modifier = if (audioTrackCount == 0) Modifier.focusRequester(quickActionsFocusRequester) else Modifier
-            )
-            PlayerBarIconButton(
-                icon = Icons.Default.Audiotrack,
-                contentDescription = stringResource(R.string.player_audio),
-                onClick = onOpenAudioTracks,
-                modifier = if (audioTrackCount > 0) Modifier.focusRequester(quickActionsFocusRequester) else Modifier
-            )
-            PlayerBarIconButton(
-                icon = Icons.Default.Hd,
-                contentDescription = stringResource(R.string.player_video_quality),
-                onClick = onOpenVideoTracks
-            )
-            PlayerBarIconButton(
-                icon = Icons.Default.AspectRatio,
-                contentDescription = stringResource(R.string.player_aspect_ratio_label, aspectRatioLabel),
-                onClick = onToggleAspectRatio
-            )
-            PlayerBarIconButton(
-                icon = Icons.Default.Settings,
-                contentDescription = stringResource(R.string.player_more_controls),
-                onClick = { showSettingsMenu = true }
-            )
-        }
-        Spacer(modifier = Modifier.weight(1f))
-        if (duration > 0) {
+        // Timestamps under the seek bar: current (left) / total (right)
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp)) {
             Text(
-                text = formatDuration(duration),
+                text = formatDuration(
+                    if (isScrubbing && duration > 0) (sliderValue * duration).toLong()
+                    else currentPosition
+                ),
                 style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.55f)
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold
             )
+            Spacer(modifier = Modifier.weight(1f))
+            if (duration > 0) {
+                Text(
+                    text = formatDuration(duration),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.55f)
+                )
+            }
+        }
+
+        // Control row — Play/Pause dead center; secondary icons balanced left/right via
+        // equal-weight side zones so the transport cluster always stays centered.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left zone — track/quality/speed, right-aligned toward the center cluster
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                PlayerBarIconButton(
+                    icon = Icons.Default.ClosedCaption,
+                    contentDescription = stringResource(R.string.player_subs),
+                    onClick = onOpenSubtitleTracks
+                )
+                PlayerBarIconButton(
+                    icon = Icons.Default.Audiotrack,
+                    contentDescription = stringResource(R.string.player_audio),
+                    onClick = onOpenAudioTracks
+                )
+                if (videoQualityCount > 0) {
+                    PlayerBarIconButton(
+                        icon = Icons.Default.Hd,
+                        contentDescription = stringResource(R.string.player_video_quality),
+                        onClick = onOpenVideoTracks
+                    )
+                }
+                PlayerBarIconButton(
+                    icon = Icons.Default.Speed,
+                    contentDescription = stringResource(R.string.player_playback_speed_value, formatPlaybackSpeedLabel(playbackSpeed)),
+                    onClick = onOpenPlaybackSpeed
+                )
+            }
+
+            // Center transport cluster
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (hasPreviousEpisode) {
+                    PlayerTransportButton(
+                        icon = Icons.Default.SkipPrevious,
+                        contentDescription = stringResource(R.string.player_previous_episode),
+                        onClick = onPlayPreviousEpisode,
+                        buttonSize = 44.dp,
+                        repeatOnHold = false
+                    )
+                }
+                PlayerTransportButton(
+                    icon = Icons.Default.FastRewind,
+                    contentDescription = stringResource(R.string.player_rewind),
+                    onClick = onSeekBackward,
+                    buttonSize = 44.dp
+                )
+                PlayerTransportButton(
+                    icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = stringResource(if (isPlaying) R.string.player_pause else R.string.player_play),
+                    onClick = onTogglePlayPause,
+                    buttonSize = 60.dp,
+                    repeatOnHold = false,
+                    modifier = Modifier
+                        .focusRequester(playButtonFocusRequester)
+                        .onFocusChanged { Log.d("SeekDbg", "PLAY/PAUSE focus isFocused=${it.isFocused}") }
+                        .focusProperties { up = quickActionsFocusRequester }
+                )
+                PlayerTransportButton(
+                    icon = Icons.Default.FastForward,
+                    contentDescription = stringResource(R.string.player_forward),
+                    onClick = onSeekForward,
+                    buttonSize = 44.dp
+                )
+                if (hasNextEpisode) {
+                    PlayerTransportButton(
+                        icon = Icons.Default.SkipNext,
+                        contentDescription = stringResource(R.string.player_next_episode),
+                        onClick = onPlayNextEpisode,
+                        buttonSize = 44.dp,
+                        repeatOnHold = false
+                    )
+                }
+            }
+
+            // Right zone — episodes/aspect/pip/timer/more, left-aligned toward the center
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.Start),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (showEpisodesAction) {
+                    PlayerBarIconButton(
+                        icon = Icons.Default.PlaylistPlay,
+                        contentDescription = stringResource(R.string.player_episodes),
+                        onClick = onOpenEpisodes
+                    )
+                }
+                PlayerBarIconButton(
+                    icon = Icons.Default.AspectRatio,
+                    contentDescription = stringResource(R.string.player_aspect_ratio_label, aspectRatioLabel),
+                    onClick = onToggleAspectRatio
+                )
+                if (pipSupported) {
+                    PlayerBarIconButton(
+                        icon = Icons.Default.PictureInPictureAlt,
+                        contentDescription = stringResource(R.string.player_picture_in_picture),
+                        onClick = onEnterPictureInPicture
+                    )
+                }
+                PlayerBarIconButton(
+                    icon = Icons.Default.Bedtime,
+                    contentDescription = stringResource(R.string.player_stop_playback_after),
+                    onClick = onOpenStopPlaybackTimer
+                )
+                PlayerBarIconButton(
+                    icon = Icons.Default.Settings,
+                    contentDescription = stringResource(R.string.player_more_controls),
+                    onClick = { showSettingsMenu = true }
+                )
+            }
         }
     }
 
     // Settings popup \u2014 gear icon reveals secondary options
     if (showSettingsMenu) {
         Popup(
-            alignment = Alignment.BottomCenter,
+            alignment = Alignment.BottomEnd,
             onDismissRequest = { showSettingsMenu = false },
             properties = PopupProperties(focusable = true)
         ) {
@@ -1211,19 +1368,13 @@ private fun PlayerVodInfo(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     PlayerQuickSettingsButton(
-                        text = stringResource(R.string.player_playback_speed_value, formatPlaybackSpeedLabel(playbackSpeed)),
-                        onClick = { showSettingsMenu = false; onOpenPlaybackSpeed() }
-                    )
-                    PlayerQuickSettingsButton(
                         text = stringResource(if (isMuted) R.string.player_unmute else R.string.player_mute),
                         onClick = { showSettingsMenu = false; onToggleMute() }
                     )
-                    if (showEpisodesAction) {
-                        PlayerQuickSettingsButton(
-                            text = stringResource(R.string.player_episodes),
-                            onClick = { showSettingsMenu = false; onOpenEpisodes() }
-                        )
-                    }
+                    PlayerQuickSettingsButton(
+                        text = stringResource(if (isCastConnected) R.string.player_stop_casting else R.string.player_cast),
+                        onClick = { showSettingsMenu = false; if (isCastConnected) onStopCasting() else onCast() }
+                    )
                     if (audioVideoSyncEnabled) {
                         PlayerQuickSettingsButton(
                             text = stringResource(R.string.player_av_sync_short),
@@ -1232,38 +1383,16 @@ private fun PlayerVodInfo(
                     }
                     PlayerQuickSettingsButton(
                         text = sleepTimerActionLabel(
-                            title = stringResource(R.string.player_stop_playback_after),
-                            activeLabel = stringResource(R.string.player_stop_timer_status, formatTimerRemaining(sleepTimerUiState.stopRemainingMs)),
-                            active = sleepTimerUiState.stopTimerActive
-                        ),
-                        onClick = { showSettingsMenu = false; onOpenStopPlaybackTimer() }
-                    )
-                    PlayerQuickSettingsButton(
-                        text = sleepTimerActionLabel(
                             title = stringResource(R.string.player_idle_standby_after),
                             activeLabel = stringResource(R.string.player_idle_timer_status, formatTimerRemaining(sleepTimerUiState.idleRemainingMs)),
                             active = sleepTimerUiState.idleTimerActive
                         ),
                         onClick = { showSettingsMenu = false; onOpenIdleStandbyTimer() }
                     )
-                    PlayerQuickSettingsButton(
-                        text = stringResource(if (isCastConnected) R.string.player_stop_casting else R.string.player_cast),
-                        onClick = { showSettingsMenu = false; if (isCastConnected) onStopCasting() else onCast() }
-                    )
-                    PlayerQuickSettingsButton(
-                        text = stringResource(R.string.player_picture_in_picture),
-                        onClick = { showSettingsMenu = false; onEnterPictureInPicture() }
-                    )
                     if (showExternalPlayerAction) {
                         PlayerQuickSettingsButton(
                             text = stringResource(R.string.player_open_in_external_player),
                             onClick = { showSettingsMenu = false; onOpenExternalPlayer() }
-                        )
-                    }
-                    if (hasNextEpisode) {
-                        PlayerQuickSettingsButton(
-                            text = stringResource(R.string.player_next_episode),
-                            onClick = { showSettingsMenu = false; onPlayNextEpisode() }
                         )
                     }
                 }
@@ -1440,6 +1569,7 @@ private fun PlayerTransportButton(
     contentDescription: String,
     onClick: () -> Unit,
     buttonSize: androidx.compose.ui.unit.Dp = 56.dp,
+    repeatOnHold: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -1477,6 +1607,7 @@ private fun PlayerTransportButton(
         modifier = modifier
             .size(buttonSize)
             .onPreviewKeyEvent { event ->
+                if (!repeatOnHold) return@onPreviewKeyEvent false
                 when (event.nativeKeyEvent.keyCode) {
                     android.view.KeyEvent.KEYCODE_DPAD_CENTER,
                     android.view.KeyEvent.KEYCODE_ENTER,

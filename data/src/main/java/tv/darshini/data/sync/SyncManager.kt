@@ -1043,6 +1043,78 @@ class SyncManager @Inject constructor(
             )
         }
 
+        var movieCategoryCount = 0
+        var seriesCategoryCount = 0
+
+        // Movies and Series index FIRST so their catalogs (and search) populate before Live.
+        // Live is fetched last, below. itemsIndexed is 0 here because Live has not run yet.
+        syncProgressBus.emit(
+            tv.darshini.domain.sync.SyncProgress(
+                section = tv.darshini.domain.sync.Section.VOD,
+                current = 0,
+                total = 0,
+                currentLabel = "",
+                itemsIndexed = 0
+            )
+        )
+        if (AppTopLevelDestination.MOVIES in enabledDestinations) {
+            movieCategoryCount = syncXtreamCategoryShell(
+                provider = provider,
+                api = api,
+                contentType = ContentType.MOVIE,
+                label = "Movies",
+                now = now,
+                onProgress = onProgress
+            ).getOrElse { error ->
+                warnings += "Movies categories could not be loaded; movie indexing will retry later."
+                upsertXtreamIndexJob(
+                    providerId = provider.id,
+                    section = ContentType.MOVIE.name,
+                    state = xtreamIndexFailureState(error),
+                    now = now,
+                    lastAttemptAt = now,
+                    lastError = sanitizeThrowableMessage(error)
+                )
+                0
+            }
+            if (movieCategoryCount > 0) {
+                scheduleXtreamIndexSync(provider.id, ContentType.MOVIE)
+            }
+        }
+        syncProgressBus.emit(
+            tv.darshini.domain.sync.SyncProgress(
+                section = tv.darshini.domain.sync.Section.SERIES,
+                current = 0,
+                total = 0,
+                currentLabel = "",
+                itemsIndexed = 0
+            )
+        )
+        if (AppTopLevelDestination.SERIES in enabledDestinations) {
+            seriesCategoryCount = syncXtreamCategoryShell(
+                provider = provider,
+                api = api,
+                contentType = ContentType.SERIES,
+                label = "Series",
+                now = now,
+                onProgress = onProgress
+            ).getOrElse { error ->
+                warnings += "Series categories could not be loaded; series indexing will retry later."
+                upsertXtreamIndexJob(
+                    providerId = provider.id,
+                    section = ContentType.SERIES.name,
+                    state = xtreamIndexFailureState(error),
+                    now = now,
+                    lastAttemptAt = now,
+                    lastError = sanitizeThrowableMessage(error)
+                )
+                0
+            }
+            if (seriesCategoryCount > 0) {
+                scheduleXtreamIndexSync(provider.id, ContentType.SERIES)
+            }
+        }
+
         upsertXtreamIndexJob(
             providerId = provider.id,
             section = ContentType.LIVE.name,
@@ -1241,7 +1313,11 @@ class SyncManager @Inject constructor(
                 lastAttemptAt = now,
                 lastError = sanitizeThrowableMessage(error)
             )
-            throw error
+            // Live is fetched LAST, after Movies/Series are already committed above. A Live
+            // failure must not abort the whole sync and discard that work — degrade to
+            // non-fatal; Live retries in the background via its failure-state index job.
+            warnings += "Live TV sync failed; it will retry in the background."
+            metadata.liveCount
         }
         if (AppTopLevelDestination.LIVE_TV in enabledDestinations) {
             upsertXtreamIndexJob(
@@ -1256,82 +1332,6 @@ class SyncManager @Inject constructor(
                 lastError = null
             )
             scheduleXtreamIndexSync(provider.id, ContentType.LIVE)
-        }
-
-        var movieCategoryCount = 0
-        var seriesCategoryCount = 0
-
-        // Transition VOD : signale a l'UI qu'on passe a la section Movies. Le total
-        // reel des categories VOD n'est connu qu'a l'interieur de `syncXtreamCategoryShell`,
-        // donc on emet en indetermine (total = 0). `itemsIndexed` cumule le LIVE deja importe.
-        syncProgressBus.emit(
-            tv.darshini.domain.sync.SyncProgress(
-                section = tv.darshini.domain.sync.Section.VOD,
-                current = 0,
-                total = 0,
-                currentLabel = "",
-                itemsIndexed = liveCount
-            )
-        )
-        if (AppTopLevelDestination.MOVIES in enabledDestinations) {
-            movieCategoryCount = syncXtreamCategoryShell(
-                provider = provider,
-                api = api,
-                contentType = ContentType.MOVIE,
-                label = "Movies",
-                now = now,
-                onProgress = onProgress
-            ).getOrElse { error ->
-                warnings += "Movies categories could not be loaded; movie indexing will retry later."
-                upsertXtreamIndexJob(
-                    providerId = provider.id,
-                    section = ContentType.MOVIE.name,
-                    state = xtreamIndexFailureState(error),
-                    now = now,
-                    lastAttemptAt = now,
-                    lastError = sanitizeThrowableMessage(error)
-                )
-                0
-            }
-            if (movieCategoryCount > 0) {
-                scheduleXtreamIndexSync(provider.id, ContentType.MOVIE)
-            }
-        }
-        // Transition SERIES : meme principe que VOD ci-dessus. `itemsIndexed` reste a
-        // `liveCount` car VOD ne stage pas d'items dans la base au moment du shell
-        // (le contenu detaille est rempli ulterieurement par XtreamIndexWorker).
-        syncProgressBus.emit(
-            tv.darshini.domain.sync.SyncProgress(
-                section = tv.darshini.domain.sync.Section.SERIES,
-                current = 0,
-                total = 0,
-                currentLabel = "",
-                itemsIndexed = liveCount
-            )
-        )
-        if (AppTopLevelDestination.SERIES in enabledDestinations) {
-            seriesCategoryCount = syncXtreamCategoryShell(
-                provider = provider,
-                api = api,
-                contentType = ContentType.SERIES,
-                label = "Series",
-                now = now,
-                onProgress = onProgress
-            ).getOrElse { error ->
-                warnings += "Series categories could not be loaded; series indexing will retry later."
-                upsertXtreamIndexJob(
-                    providerId = provider.id,
-                    section = ContentType.SERIES.name,
-                    state = xtreamIndexFailureState(error),
-                    now = now,
-                    lastAttemptAt = now,
-                    lastError = sanitizeThrowableMessage(error)
-                )
-                0
-            }
-            if (seriesCategoryCount > 0) {
-                scheduleXtreamIndexSync(provider.id, ContentType.SERIES)
-            }
         }
 
         if (trackInitialLiveOnboarding) {
@@ -1609,7 +1609,7 @@ class SyncManager @Inject constructor(
             ContentType.SERIES -> listOf(ContentType.SERIES)
             ContentType.LIVE -> listOf(ContentType.LIVE)
             ContentType.SERIES_EPISODE -> emptyList()
-            null -> listOf(ContentType.LIVE, ContentType.MOVIE, ContentType.SERIES)
+            null -> listOf(ContentType.MOVIE, ContentType.SERIES, ContentType.LIVE)
         }
         // A section can still be queued from before it was hidden (or by a periodic worker).
         // Drop hidden sections at execution time so their index never downloads.
@@ -3298,8 +3298,12 @@ class SyncManager @Inject constructor(
             }
             progress(provider.id, onProgress, "Indexing ${xtreamIndexSectionLabel(contentType)}: ${category.name}")
             val outcome = when (contentType) {
-                ContentType.MOVIE -> fetchMovieCategoryOutcome(provider, api, category.toXtreamCategory(), previewLimit = PREVIEW_SYNC_ITEM_LIMIT)
-                ContentType.SERIES -> fetchSeriesCategoryOutcome(provider, api, category.toXtreamCategory(), previewLimit = PREVIEW_SYNC_ITEM_LIMIT)
+                // Store the FULL category (not just the latest 20) so search and "see all"
+                // cover the whole catalog. The names are already in `rawStreams` — no extra
+                // network cost. The preview row still shows the newest 18 because the preview
+                // DAO orders by added_at/last_modified DESC. Per-item detail stays on-demand.
+                ContentType.MOVIE -> fetchMovieCategoryOutcome(provider, api, category.toXtreamCategory(), previewLimit = null)
+                ContentType.SERIES -> fetchSeriesCategoryOutcome(provider, api, category.toXtreamCategory(), previewLimit = null)
                 else -> error("Unsupported section")
             }
             when (val categoryOutcome = outcome.outcome) {

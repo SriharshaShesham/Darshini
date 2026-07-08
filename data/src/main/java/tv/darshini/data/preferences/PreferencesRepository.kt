@@ -411,7 +411,7 @@ class PreferencesRepository @Inject constructor(
     }
 
     val playerControlsTimeoutSeconds: Flow<Int> = context.dataStore.data.map { preferences ->
-        (preferences[PreferencesKeys.PLAYER_CONTROLS_TIMEOUT_SECONDS] ?: 5).coerceIn(2, 60)
+        (preferences[PreferencesKeys.PLAYER_CONTROLS_TIMEOUT_SECONDS] ?: 8).coerceIn(2, 60)
     }
 
     val playerLiveOverlayTimeoutSeconds: Flow<Int> = context.dataStore.data.map { preferences ->

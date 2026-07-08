@@ -1142,6 +1142,10 @@ class SettingsViewModel @Inject constructor(
         providerActions.refreshProvider(viewModelScope, providerId, syncMode)
     }
 
+    fun dismissSyncOverlay() {
+        providerActions.dismissSyncOverlay()
+    }
+
     fun syncProviderSection(providerId: Long, selection: ProviderSyncSelection) {
         syncActions.syncProviderSection(viewModelScope, providerId, selection)
     }

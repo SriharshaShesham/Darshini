@@ -1,6 +1,7 @@
 package tv.darshini.app
 
 import android.app.Application
+import android.util.Log
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -60,6 +61,7 @@ class StreamVaultApp : Application(), SingletonImageLoader.Factory {
     }
 
     override fun onCreate() {
+        Log.i("ColdStartDbg", "StreamVaultApp.onCreate START t=${System.currentTimeMillis()}")
         super.onCreate()
         CrashReportStore.install(this)
         runtimeDiagnosticsManager.start()
@@ -109,6 +111,7 @@ class StreamVaultApp : Application(), SingletonImageLoader.Factory {
         XtreamIndexWorker.enqueueLaunchStaleCheck(this)
         RecordingReconcileWorker.enqueuePeriodic(this)
         RecordingReconcileWorker.enqueueOneShot(this)
+        Log.i("ColdStartDbg", "StreamVaultApp.onCreate END t=${System.currentTimeMillis()}")
     }
 
     override fun onTerminate() {

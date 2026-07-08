@@ -6,6 +6,8 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Build
 import android.os.StrictMode
+import android.util.Log
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import android.util.Rational
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -63,6 +65,7 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_EXTERNAL_ROUTE = "tv.darshini.app.extra.EXTERNAL_ROUTE"
         private const val MAX_PIP_ASPECT_RATIO = 2.39f
         private const val MIN_PIP_ASPECT_RATIO = 1f / MAX_PIP_ASPECT_RATIO
+        private const val STARTUP_TAG = "ColdStartDbg"
     }
 
     private data class PlayerPictureInPictureState(
@@ -96,6 +99,8 @@ class MainActivity : ComponentActivity() {
     private var playerPictureInPictureState = PlayerPictureInPictureState()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
+        Log.i(STARTUP_TAG, "MainActivity.onCreate START t=${System.currentTimeMillis()}")
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(
                 StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build()
@@ -113,12 +118,18 @@ class MainActivity : ComponentActivity() {
         _pictureInPictureModeFlow.value = isInPictureInPictureMode
         handleExternalIntent(intent)
         if (isTelevisionDevice()) {
+            Log.i(STARTUP_TAG, "TV refresh block SCHEDULED t=${System.currentTimeMillis()}")
             lifecycleScope.launch {
+                Log.i(STARTUP_TAG, "TV refresh block START t=${System.currentTimeMillis()}")
                 watchNextManager.refreshWatchNext()
+                Log.i(STARTUP_TAG, "refreshWatchNext done t=${System.currentTimeMillis()}")
                 launcherRecommendationsManager.refreshRecommendations()
+                Log.i(STARTUP_TAG, "refreshRecommendations done t=${System.currentTimeMillis()}")
                 tvInputChannelSyncManager.refreshTvInputCatalog()
+                Log.i(STARTUP_TAG, "TV refresh block END t=${System.currentTimeMillis()}")
             }
         }
+        Log.i(STARTUP_TAG, "Before setContent t=${System.currentTimeMillis()}")
         setContent {
             val appLanguage by preferencesRepository.appLanguage.collectAsState(initial = "system")
             val appTheme by preferencesRepository.appTheme.collectAsState(initial = "dark")

@@ -87,12 +87,13 @@ import tv.darshini.app.ui.components.shell.CategoryDetailHeader
 import tv.darshini.app.ui.components.shell.VodSectionHeader
 import tv.darshini.app.ui.design.FocusRestoreHost
 import tv.darshini.app.ui.design.requestFocusSafely
+import tv.darshini.app.ui.design.requestFocusWithRetries
+import kotlinx.coroutines.flow.first
 import tv.darshini.app.ui.model.VodViewMode
 import tv.darshini.app.ui.screens.vod.HandleVodUserMessage
 import tv.darshini.app.ui.screens.vod.ProtectedVodPinDialog
 import tv.darshini.app.ui.screens.vod.VodBrowseDefaults
 import tv.darshini.app.ui.screens.vod.vodActiveFilterSortDetail
-import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -129,20 +130,15 @@ fun SeriesScreen(
     // returning to preview), the currently-focused element is removed from the composition tree.
     // Compose TV's fallback focus search then finds the first focusable node — the sidebar hamburger.
     // ON_RESUME never fires for in-screen transitions, so FocusRestoreHost can't help here.
-    // Retry focus at increasing intervals: back-to-preview requires focus to reach a chip inside
-    // LazyRow inside a LazyColumn item — more nesting than entering category detail — so the first
-    // attempt may silently fail while inner lazy items are still being laid out.
+    // Category items load async: wait for the data to actually arrive before requesting focus,
+    // instead of racing it with a fixed wall-clock ladder that a slow DB load can outlast.
     var previousSelectedCategory by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(uiState.selectedCategory) {
         val prev = previousSelectedCategory
         previousSelectedCategory = uiState.selectedCategory
         if (prev != uiState.selectedCategory) {
-            var focused = false
-            for (delayMs in longArrayOf(80L, 150L, 250L, 400L)) {
-                delay(delayMs)
-                focused = initialContentFocusRequester.requestFocusSafely(tag = "SeriesScreen", target = "Category transition")
-                if (focused) break
-            }
+            snapshotFlow { uiState.selectedCategory == null || !uiState.isLoadingSelectedCategory }.first { it }
+            initialContentFocusRequester.requestFocusWithRetries(tag = "SeriesScreen", target = "Category transition")
         }
     }
 
@@ -172,8 +168,7 @@ fun SeriesScreen(
         FocusRestoreHost(
             enabled = !uiState.isLoading && uiState.errorMessage == null,
             onRestore = {
-                delay(100)
-                initialContentFocusRequester.requestFocusSafely(tag = "SeriesScreen", target = "Initial series content")
+                initialContentFocusRequester.requestFocusWithRetries(tag = "SeriesScreen", target = "Initial series content")
             }
         ) {
         AppScreenScaffold(
@@ -476,11 +471,6 @@ private fun SeriesVodContent(
     val restoreTargetId = uiState.lastFocusedSeriesId?.takeIf { id ->
         catEntries.any { entry -> entry.value.any { it.id == id } }
     }
-    val fallbackSeriesId = restoreTargetId
-        ?: favoriteSeries.firstOrNull()?.id
-        ?: freshSeries.firstOrNull()?.id
-        ?: topRatedSeries.firstOrNull()?.id
-        ?: catEntries.firstOrNull()?.value?.firstOrNull()?.id
     val categoryOptions = remember(visibleCategoryNames, uiState.categoryCounts, categoryByName, uiState.parentalControlLevel, uiState.unlockedCategoryIds) {
         visibleCategoryNames.map { name ->
             val matchedCategory = categoryByName[name]
@@ -743,7 +733,10 @@ private fun SeriesVodContent(
                             isLocked = isLocked,
                             onClick = { if (isLocked) onProtectedSeriesClick(series) else onSeriesClick(series) },
                             onLongClick = { onShowDialog(series) },
-                            modifier = if (series.id == fallbackSeriesId) Modifier.focusRequester(initialFocusRequester) else Modifier
+                            // Only the deep-restore target carries the requester here; when there is
+                            // no restore target the requester lives on the top action chip instead.
+                            // Attaching it to both nodes at once is undefined behavior.
+                            modifier = if (restoreTargetId != null && series.id == restoreTargetId) Modifier.focusRequester(initialFocusRequester) else Modifier
                         )
                     }
                 }
@@ -784,7 +777,9 @@ private fun SeriesVodContent(
     var draggingSeries by remember { mutableStateOf<Series?>(null) }
     var showBrowseOptions by rememberSaveable(uiState.selectedCategory) { mutableStateOf(false) }
     var showSearchBar by rememberSaveable(uiState.selectedCategory) { mutableStateOf(searchQuery.isNotBlank()) }
-    val initialGridSeriesId = filteredGridSeries.firstOrNull()?.id
+    // Restore focus to the series the user opened when returning from detail; first item otherwise.
+    val initialGridSeriesId = uiState.lastFocusedSeriesId?.takeIf { id -> filteredGridSeries.any { it.id == id } }
+        ?: filteredGridSeries.firstOrNull()?.id
 
     if (showBrowseOptions) {
         VodBrowseOptionsDialog(
@@ -805,7 +800,14 @@ private fun SeriesVodContent(
         )
     }
 
-    val modernGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    // Saveable so the grid's scroll position survives back-navigation from detail — otherwise the
+    // restore-target card may not be composed and the focus request silently fails.
+    val modernGridState = rememberSaveable(
+        uiState.selectedCategory,
+        saver = androidx.compose.foundation.lazy.grid.LazyGridState.Saver
+    ) {
+        androidx.compose.foundation.lazy.grid.LazyGridState()
+    }
     InfiniteScrollEffect(
         gridState = modernGridState,
         enabled = !uiState.isReorderMode,
@@ -858,7 +860,10 @@ private fun SeriesVodContent(
             }
         }
 
-        if (uiState.isLoadingSelectedCategory) {
+        // Show the spinner only when there is nothing to render yet. Replacing an already-populated
+        // grid with a spinner (e.g. during a sync re-load) disposes the focused card and drops
+        // focus onto the sidebar hamburger.
+        if (uiState.isLoadingSelectedCategory && filteredGridSeries.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Box(
                     modifier = Modifier
@@ -1020,7 +1025,9 @@ private fun SeriesVodClassicContent(
         if (uiState.isReorderMode) uiState.filteredSeries else baseSeries
     }
     var draggingSeries by remember { mutableStateOf<Series?>(null) }
-    val initialGridSeriesId = filteredGridSeries.firstOrNull()?.id
+    // Restore focus to the series the user opened when returning from detail; first item otherwise.
+    val initialGridSeriesId = uiState.lastFocusedSeriesId?.takeIf { id -> filteredGridSeries.any { it.id == id } }
+        ?: filteredGridSeries.firstOrNull()?.id
 
     LaunchedEffect(uiState.vodViewMode, uiState.selectedCategory, uiState.isReorderMode) {
         if (uiState.vodViewMode == VodViewMode.CLASSIC && uiState.selectedCategory == null && !uiState.isReorderMode) {
@@ -1189,7 +1196,12 @@ private fun SeriesVodClassicContent(
                 )
             }
 
-            val classicGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+            val classicGridState = rememberSaveable(
+                uiState.selectedCategory,
+                saver = androidx.compose.foundation.lazy.grid.LazyGridState.Saver
+            ) {
+                androidx.compose.foundation.lazy.grid.LazyGridState()
+            }
             InfiniteScrollEffect(
                 gridState = classicGridState,
                 enabled = !uiState.isReorderMode,
@@ -1216,7 +1228,7 @@ private fun SeriesVodClassicContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                if (uiState.isLoadingSelectedCategory) {
+                if (uiState.isLoadingSelectedCategory && filteredGridSeries.isEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         Box(
                             modifier = Modifier

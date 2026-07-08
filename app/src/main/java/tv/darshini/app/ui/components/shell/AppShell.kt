@@ -43,8 +43,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.filled.Dvr
 import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.runtime.Composable
@@ -86,6 +86,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.focusTarget
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import tv.darshini.app.ui.design.requestFocusSafely
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
@@ -300,7 +305,27 @@ fun AppScreenScaffold(
                 targetValue = if (railExpanded) 240.dp else 72.dp,
                 label = "railWidth"
             )
+            val contentPaneFocusRequester = remember { FocusRequester() }
+            var fallbackFocusBounce by remember { mutableIntStateOf(0) }
+            LaunchedEffect(fallbackFocusBounce) {
+                if (fallbackFocusBounce > 0) {
+                    android.util.Log.d("FocusDebug", "Sink caught fallback focus; bouncing into content")
+                    contentPaneFocusRequester.requestFocusSafely(tag = "FocusDebug", target = "Content pane")
+                }
+            }
             Row(modifier = Modifier.fillMaxSize()) {
+                // Whenever the focused node is disposed (list reload, category switch, row
+                // recomposition), Compose grants default focus to the FIRST focusable in the tree,
+                // bypassing focusProperties.onEnter. That first focusable used to be the rail
+                // hamburger — the reason focus kept jumping there. This invisible sink claims the
+                // default grant instead and bounces focus into the content pane, whose
+                // focusRestorer returns it to the last-focused item.
+                Box(
+                    modifier = Modifier
+                        .size(1.dp)
+                        .onFocusChanged { if (it.isFocused) fallbackFocusBounce++ }
+                        .focusTarget()
+                )
                 DestinationRail(
                     currentRoute = currentRoute,
                     onNavigate = onNavigate,
@@ -313,6 +338,10 @@ fun AppScreenScaffold(
 
                 Column(
                     modifier = Modifier
+                        .focusRequester(contentPaneFocusRequester)
+                        // Restore focus to the last-focused content child when focus re-enters
+                        // from the rail or the fallback sink, instead of the first focusable.
+                        .focusRestorer()
                         .focusGroup()
                         .fillMaxSize()
                         .padding(
@@ -977,7 +1006,11 @@ private fun DestinationRail(
         ) {
             TvClickableSurface(
                 onClick = onToggleExpanded,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged {
+                        if (it.isFocused) android.util.Log.d("FocusDebug", "HAMBURGER gained focus")
+                    },
                 shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
                 colors = ClickableSurfaceDefaults.colors(
                     containerColor = Color.Transparent,
@@ -1158,7 +1191,7 @@ private fun AppTopLevelDestination.toDestinationItem(): DestinationItem = when (
     AppTopLevelDestination.HOME -> DestinationItem(Routes.HOME, R.string.nav_home, Icons.Default.Home)
     AppTopLevelDestination.LIVE_TV -> DestinationItem(Routes.LIVE_TV, R.string.nav_live_tv, Icons.Default.Tv)
     AppTopLevelDestination.MOVIES -> DestinationItem(Routes.MOVIES, R.string.nav_movies, Icons.Default.Movie)
-    AppTopLevelDestination.SERIES -> DestinationItem(Routes.SERIES, R.string.nav_series, Icons.Default.VideoLibrary)
+    AppTopLevelDestination.SERIES -> DestinationItem(Routes.SERIES, R.string.nav_series, Icons.Default.Dvr)
     AppTopLevelDestination.DOWNLOADS -> DestinationItem(Routes.DOWNLOADS, R.string.nav_downloads, Icons.Default.Download)
     AppTopLevelDestination.GUIDE -> DestinationItem(Routes.EPG, R.string.nav_epg, Icons.Default.Info)
     AppTopLevelDestination.SEARCH -> DestinationItem(Routes.SEARCH, R.string.search_title, Icons.Default.Search)

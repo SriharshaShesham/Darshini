@@ -30,7 +30,12 @@ data class SearchContentResult(
     val channels: List<Channel> = emptyList(),
     val movies: List<Movie> = emptyList(),
     val series: List<Series> = emptyList(),
-    val isPartialResult: Boolean = false
+    val isPartialResult: Boolean = false,
+    // searchFailed = the FTS lookup itself errored (a real "search unavailable").
+    // indexingInProgress = the catalog is still being built, so results are simply incomplete
+    // yet — NOT an error. The UI distinguishes these so it stops mislabelling indexing as failure.
+    val searchFailed: Boolean = false,
+    val indexingInProgress: Boolean = false
 )
 
 class SearchContent @Inject constructor(
@@ -68,7 +73,9 @@ class SearchContent @Inject constructor(
                 channels = result.channels,
                 movies = result.movies,
                 series = result.series,
-                isPartialResult = searchDegraded || indexingActive || indexWorkActive
+                isPartialResult = searchDegraded || indexingActive || indexWorkActive,
+                searchFailed = searchDegraded,
+                indexingInProgress = indexingActive || indexWorkActive
             )
         }
     }
