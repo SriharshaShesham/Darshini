@@ -2,6 +2,18 @@
 
 All notable product changes are recorded in this document.
 
+## [1.0.16] - 2026-07-09
+
+### Added
+
+- Added an "Unwatch" button on the movie and series detail screens: on a movie it removes that title from your watch history and resume list; on a series it clears the entire series' watch history and removes it from Continue Watching. The button appears only when there is resume progress.
+- Refreshed app branding: a new peacock-feather TV launcher icon, a gold "Darshini" wordmark banner, and a white splash screen.
+
+### Fixed
+
+- Fixed "Import Data" failing on release builds: R8 was renaming the backup data models (which live in `tv.darshini.domain.manager`) so imported files parsed as an empty backup. Added a ProGuard keep rule for those DTOs.
+- Fixed sidebar navigation from the Settings screen: selecting Movies/Home/etc. while a background sync was running did nothing and bounced focus back to Settings. Top-level navigation is no longer blocked by sync state.
+
 ## [1.0.15] - 2026-06-13
 
 ### Fixed

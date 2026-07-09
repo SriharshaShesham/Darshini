@@ -137,6 +137,7 @@ fun SeriesDetailScreen(
         onDownloadEpisode = { episode ->
             viewModel.downloadEpisode(context, episode)
         },
+        onRemoveFromHistory = viewModel::removeFromWatchHistory,
         onBack = onBack
     )
 }
@@ -156,6 +157,7 @@ private fun SeriesDetailContent(
     onResumeClick: (Episode) -> Unit,
     onCopyEpisodeUrl: suspend (Episode) -> String?,
     onDownloadEpisode: (Episode) -> Unit,
+    onRemoveFromHistory: () -> Unit,
     onBack: () -> Unit
 ) {
     val isTelevisionDevice = rememberIsTelevisionDevice()
@@ -311,7 +313,8 @@ private fun SeriesDetailContent(
                                      hasProgress = hasProgress,
                                      onResumeClick = onResumeClick,
                                      onCopyUrl = { copyEpisodeUrl(ep) },
-                                     onToggleFavorite = onToggleFavorite
+                                     onToggleFavorite = onToggleFavorite,
+                                     onRemoveFromHistory = onRemoveFromHistory
                                  )
                             }
                             if (resumeEpisode == null) {
@@ -397,7 +400,8 @@ private fun SeriesDetailContent(
                                      hasProgress = hasProgress,
                                      onResumeClick = onResumeClick,
                                      onCopyUrl = { copyEpisodeUrl(ep) },
-                                     onToggleFavorite = onToggleFavorite
+                                     onToggleFavorite = onToggleFavorite,
+                                     onRemoveFromHistory = onRemoveFromHistory
                                  )
                             }
                             if (resumeEpisode == null) {
@@ -525,7 +529,8 @@ private fun SeriesDetailActions(
     hasProgress: Boolean,
     onResumeClick: (Episode) -> Unit,
     onCopyUrl: () -> Unit,
-    onToggleFavorite: () -> Unit
+    onToggleFavorite: () -> Unit,
+    onRemoveFromHistory: () -> Unit
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
         TvButton(
@@ -553,6 +558,19 @@ private fun SeriesDetailActions(
                     )
                 }
             )
+        }
+        if (hasProgress) {
+            TvButton(
+                onClick = onRemoveFromHistory,
+                colors = ButtonDefaults.colors(
+                    containerColor = AppColors.SurfaceEmphasis,
+                    contentColor = AppColors.TextPrimary,
+                    focusedContainerColor = AppColors.Focus,
+                    focusedContentColor = AppColors.Canvas
+                )
+            ) {
+                Text(text = stringResource(R.string.content_detail_unwatch))
+            }
         }
         TvButton(
             onClick = onCopyUrl,

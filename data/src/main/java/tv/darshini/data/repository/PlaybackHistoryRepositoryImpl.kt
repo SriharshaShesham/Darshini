@@ -225,6 +225,21 @@ class PlaybackHistoryRepositoryImpl @Inject constructor(
         Result.error("Failed to remove playback history item", e)
     }
 
+    override suspend fun removeSeriesFromHistory(seriesId: Long, providerId: Long): Result<Unit> = try {
+        val keysToRemove = pendingResumeUpdates.entries
+            .filter { it.value.seriesId == seriesId && it.value.providerId == providerId }
+            .map { it.key }
+        keysToRemove.forEach { pendingResumeUpdates.remove(it) }
+        if (keysToRemove.isNotEmpty()) publishPendingResumeUpdates()
+        transactionRunner.inTransaction {
+            dao.deleteBySeries(seriesId, providerId)
+            episodeDao.resetWatchProgressForSeries(seriesId, providerId)
+        }
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.error("Failed to remove series playback history", e)
+    }
+
     override suspend fun clearAllHistory(): Result<Unit> = try {
         pendingResumeUpdates.clear()
         transactionRunner.inTransaction {

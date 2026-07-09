@@ -55,6 +55,7 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import tv.darshini.app.R
 import tv.darshini.app.device.rememberIsTelevisionDevice
+import tv.darshini.app.ui.components.FocusableCard
 import tv.darshini.app.ui.components.rememberCrossfadeImageModel
 import tv.darshini.app.util.formatPositionMs
 import tv.darshini.app.ui.components.shell.ContentMetadataStrip
@@ -249,7 +250,8 @@ private fun MovieDetailContent(
                                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(trailerUrl)))
                                     }
                                 }
-                            }
+                            },
+                            onRemoveFromHistory = viewModel::removeFromWatchHistory
                         )
                     }
                 } else {
@@ -281,6 +283,7 @@ private fun MovieDetailContent(
                                     }
                                 }
                             },
+                            onRemoveFromHistory = viewModel::removeFromWatchHistory,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -304,13 +307,11 @@ private fun MovieDetailContent(
                                 modifier = Modifier.width(120.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                TvClickableSurface(
+                                FocusableCard(
                                     onClick = { onRelatedClick(related) },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .aspectRatio(2f / 3f),
-                                    shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(12.dp)),
-                                    cornerRadius = 12.dp
+                                    width = 120.dp,
+                                    height = 180.dp,
+                                    semanticsDescription = related.name
                                 ) {
                                     AsyncImage(
                                         model = rememberCrossfadeImageModel(related.posterUrl ?: related.backdropUrl),
@@ -372,6 +373,7 @@ private fun MovieDetailHeroText(
     onSelectVariant: (Long) -> Unit,
     playButtonFocusRequester: FocusRequester,
     onPlayTrailer: () -> Unit,
+    onRemoveFromHistory: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val hasTrailer = !movie.youtubeTrailer.isNullOrBlank()
@@ -440,6 +442,19 @@ private fun MovieDetailHeroText(
                         stringResource(R.string.movie_detail_play)
                     }
                 )
+            }
+            if (hasResume) {
+                TvButton(
+                    onClick = onRemoveFromHistory,
+                    colors = ButtonDefaults.colors(
+                        containerColor = AppColors.SurfaceEmphasis,
+                        contentColor = AppColors.TextPrimary,
+                        focusedContainerColor = AppColors.Focus,
+                        focusedContentColor = AppColors.Canvas
+                    )
+                ) {
+                    Text(text = stringResource(R.string.content_detail_unwatch))
+                }
             }
             TvButton(
                 onClick = onCopyUrl,

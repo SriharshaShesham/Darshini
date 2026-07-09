@@ -16,6 +16,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import tv.darshini.data.local.dao.ChannelPreferenceDao
 import tv.darshini.data.local.dao.SearchHistoryDao
+import tv.darshini.data.sync.SyncRepairSection
 import tv.darshini.domain.model.GroupedChannelLabelMode
 import tv.darshini.domain.model.AudioOutputPreference
 import tv.darshini.domain.model.ChannelNumberingMode
@@ -115,6 +116,7 @@ class PreferencesRepository @Inject constructor(
         val LIVE_TV_CHANNEL_MODE = stringPreferencesKey("live_tv_channel_mode")
         val SHOW_LIVE_SOURCE_SWITCHER = booleanPreferencesKey("show_live_source_switcher")
         val USE_SIDE_NAVIGATION = booleanPreferencesKey("use_side_navigation")
+        val SYNC_ON_START_SECTIONS = stringPreferencesKey("sync_on_start_sections")
         val SHOW_ALL_CHANNELS_CATEGORY = booleanPreferencesKey("show_all_channels_category")
         val SHOW_RECENT_CHANNELS_CATEGORY = booleanPreferencesKey("show_recent_channels_category")
         val LIVE_TV_CATEGORY_FILTERS = stringPreferencesKey("live_tv_category_filters")
@@ -1446,6 +1448,25 @@ class PreferencesRepository @Inject constructor(
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.USE_SIDE_NAVIGATION] = enabled
         }
+    }
+
+    val syncOnStartSections: Flow<Set<SyncRepairSection>> = context.dataStore.data.map { preferences ->
+        decodeSyncOnStartSections(preferences[PreferencesKeys.SYNC_ON_START_SECTIONS])
+    }
+
+    suspend fun setSyncOnStartSections(sections: Set<SyncRepairSection>) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SYNC_ON_START_SECTIONS] = sections.joinToString(",") { it.name }
+        }
+    }
+
+    // null (never configured) => all sections; blank (user unchecked everything) => none.
+    private fun decodeSyncOnStartSections(encoded: String?): Set<SyncRepairSection> {
+        if (encoded == null) return SyncRepairSection.values().toSet()
+        if (encoded.isBlank()) return emptySet()
+        return encoded.split(",")
+            .mapNotNull { raw -> runCatching { SyncRepairSection.valueOf(raw.trim()) }.getOrNull() }
+            .toSet()
     }
 
     val showAllChannelsCategory: Flow<Boolean> = context.dataStore.data.map { preferences ->
