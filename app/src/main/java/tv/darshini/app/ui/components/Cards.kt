@@ -3,6 +3,7 @@ package tv.darshini.app.ui.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -183,6 +184,19 @@ fun FocusableCard(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             content(isFocused)
+            // Card content (images) is clipped over the surface's border, hiding it. Redraw the
+            // focus border on top of the content so it stays visible above artwork.
+            if (isFocused || isDragging) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .border(
+                            width = if (isDragging) 4.dp else FocusSpec.CardBorderWidth,
+                            color = if (isDragging) AccentAmber else FocusBorder,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                )
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 package tv.darshini.app
 
 import android.app.Application
+import android.util.Log
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -60,6 +61,7 @@ class StreamVaultApp : Application(), SingletonImageLoader.Factory {
     }
 
     override fun onCreate() {
+        Log.i("ColdStartDbg", "StreamVaultApp.onCreate START t=${System.currentTimeMillis()}")
         super.onCreate()
         CrashReportStore.install(this)
         runtimeDiagnosticsManager.start()
@@ -99,9 +101,21 @@ class StreamVaultApp : Application(), SingletonImageLoader.Factory {
                 ProviderSyncWorker.enqueuePeriodic(this@StreamVaultApp)
                 val now = System.currentTimeMillis()
                 val lastSync = preferencesRepository.lastLaunchSyncTimestamp.first() ?: 0L
-                if (cadence.isLaunchSyncDue(lastSync, now)) {
+                // Sync only sections whose top-level destination is visible. For "Every launch" the
+                // user narrows this further via the Sync Content checkboxes; other cadences sync all visible.
+                val visibleSections = visibleSyncSections(preferencesRepository.appTopLevelDestinations.first())
+                val startSections = if (cadence == SyncCadence.EVERY_LAUNCH) {
+                    preferencesRepository.syncOnStartSections.first() intersect visibleSections
+                } else {
+                    visibleSections
+                }
+                if (startSections.isNotEmpty() && cadence.isLaunchSyncDue(lastSync, now)) {
                     preferencesRepository.setLastLaunchSyncTimestamp(now)
-                    ProviderSyncWorker.enqueueLaunchStaleCheck(this@StreamVaultApp, force = true)
+                    ProviderSyncWorker.enqueueLaunchStaleCheck(
+                        this@StreamVaultApp,
+                        force = true,
+                        sections = startSections
+                    )
                 }
             }
         }
@@ -109,6 +123,7 @@ class StreamVaultApp : Application(), SingletonImageLoader.Factory {
         XtreamIndexWorker.enqueueLaunchStaleCheck(this)
         RecordingReconcileWorker.enqueuePeriodic(this)
         RecordingReconcileWorker.enqueueOneShot(this)
+        Log.i("ColdStartDbg", "StreamVaultApp.onCreate END t=${System.currentTimeMillis()}")
     }
 
     override fun onTerminate() {

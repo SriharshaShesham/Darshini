@@ -101,7 +101,11 @@ class XtreamIndexWorker(
         private const val KEY_SECTION = "section"
         private const val KEY_FORCE = "force"
         private const val INVALID_PROVIDER_ID = -1L
-        private const val CATEGORY_SLICE_SIZE = 2
+        // Categories indexed per worker run. Progress is persisted per-category
+        // (nextCategoryIndex), so a run that's killed/limited resumes cleanly — a larger
+        // slice just means far fewer continuation hops (a 450-category catalog finished in
+        // ~10 runs instead of ~225, which used to crawl under retry backoff).
+        private const val CATEGORY_SLICE_SIZE = 40
         private const val UNIQUE_WORK_PREFIX = "xtream-index-worker-"
         private const val UNIQUE_PERIODIC_WORK_NAME = "xtream-index-periodic-worker"
 

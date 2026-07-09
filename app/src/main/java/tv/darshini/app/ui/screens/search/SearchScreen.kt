@@ -191,7 +191,8 @@ class SearchViewModel @Inject constructor(
                     else results.series,
                     isLoading = false,
                     hasSearched = true,
-                    hasSearchError = results.isPartialResult,
+                    hasSearchError = results.searchFailed,
+                    isIndexing = results.indexingInProgress,
                     parentalControlLevel = level,
                     hasActiveProvider = true,
                     queryLength = trimmedQueryLength,
@@ -340,6 +341,7 @@ data class SearchUiState(
     val isLoading: Boolean = false,
     val hasSearched: Boolean = false,
     val hasSearchError: Boolean = false,
+    val isIndexing: Boolean = false,
     val parentalControlLevel: Int = 0,
     val hasActiveProvider: Boolean = false,
     val queryLength: Int = 0,
@@ -592,6 +594,15 @@ fun SearchScreen(
                         SearchMessageState(
                             title = stringResource(R.string.search_error_title),
                             subtitle = stringResource(R.string.search_error_subtitle)
+                        )
+                    }
+                }
+
+                uiState.isEmpty && uiState.isIndexing -> {
+                    item {
+                        SearchMessageState(
+                            title = stringResource(R.string.search_indexing_title),
+                            subtitle = stringResource(R.string.search_indexing_subtitle)
                         )
                     }
                 }

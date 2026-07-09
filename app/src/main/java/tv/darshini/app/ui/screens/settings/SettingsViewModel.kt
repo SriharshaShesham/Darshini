@@ -592,6 +592,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setSyncOnStartSections(sections: Set<SyncRepairSection>) {
+        viewModelScope.launch {
+            preferencesRepository.setSyncOnStartSections(sections)
+        }
+    }
+
     fun setShowAllChannelsCategory(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setShowAllChannelsCategory(enabled)
@@ -1140,6 +1146,10 @@ class SettingsViewModel @Inject constructor(
         syncMode: SettingsProviderSyncMode = SettingsProviderSyncMode.SYNC_NOW
     ) {
         providerActions.refreshProvider(viewModelScope, providerId, syncMode)
+    }
+
+    fun dismissSyncOverlay() {
+        providerActions.dismissSyncOverlay()
     }
 
     fun syncProviderSection(providerId: Long, selection: ProviderSyncSelection) {

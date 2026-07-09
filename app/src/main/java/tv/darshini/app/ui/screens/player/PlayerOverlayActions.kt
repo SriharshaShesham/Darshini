@@ -166,6 +166,11 @@ fun PlayerViewModel.onLiveOverlayInteraction() {
 
 fun PlayerViewModel.hideControlsAfterDelay() {
     controlsHideJob?.cancel()
+    // While paused, keep the controls up indefinitely; only auto-hide during playback.
+    if (!playerEngine.isPlaying.value) {
+        controlsHideJob = null
+        return
+    }
     controlsHideJob = viewModelScope.launch {
         delay(playerControlsTimeoutMs)
         showControlsFlow.value = false

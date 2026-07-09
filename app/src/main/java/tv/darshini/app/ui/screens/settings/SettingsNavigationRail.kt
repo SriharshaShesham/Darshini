@@ -33,7 +33,7 @@ internal fun SettingsNavigationRail(
     val entries = listOf(
         SettingsNavEntry(
             label = stringResource(R.string.settings_ui),
-            icon = "U",
+            icon = "G",
             accent = Primary
         ),
         SettingsNavEntry(

@@ -21,6 +21,15 @@ internal class SettingsSyncActions(
     private val refreshProvider: (CoroutineScope, Long, SettingsProviderSyncMode) -> Unit
 ) {
     fun syncProviderSection(scope: CoroutineScope, providerId: Long, selection: ProviderSyncSelection) {
+        // Reentrancy guard: withProviderLock only serializes access to the DB per-section,
+        // it doesn't stop a second runSectionSync from launching. Two concurrent calls would
+        // both flip isSyncing/syncProgress independently, and whichever finishes first resets
+        // that shared state even while the other is still actually running — the sync appears
+        // to "do nothing" because its own progress updates get clobbered.
+        if (uiState.value.isSyncing) {
+            uiState.update { it.copy(userMessage = appContext.getString(R.string.settings_sync_already_running)) }
+            return
+        }
         scope.launch {
             when (selection) {
                 ProviderSyncSelection.SYNC_NOW -> runSectionSync(
@@ -34,11 +43,15 @@ internal class SettingsSyncActions(
     }
 
     fun syncProviderCustom(scope: CoroutineScope, providerId: Long, selections: Set<ProviderSyncSelection>) {
+        if (uiState.value.isSyncing) {
+            uiState.update { it.copy(userMessage = appContext.getString(R.string.settings_sync_already_running)) }
+            return
+        }
         scope.launch {
             val orderedSelections = listOf(
-                ProviderSyncSelection.TV,
                 ProviderSyncSelection.MOVIES,
                 ProviderSyncSelection.SERIES,
+                ProviderSyncSelection.TV,
                 ProviderSyncSelection.EPG
             ).filter { it in selections }
             if (orderedSelections.isEmpty()) {
@@ -57,6 +70,7 @@ internal class SettingsSyncActions(
             uiState.update {
                 it.copy(
                     isSyncing = true,
+                    syncOverlayDismissed = false,
                     syncProgress = appContext.getString(R.string.settings_syncing_preparing),
                     syncingProviderName = providerName
                 )
@@ -115,6 +129,7 @@ internal class SettingsSyncActions(
         uiState.update {
             it.copy(
                 isSyncing = true,
+                syncOverlayDismissed = false,
                 syncProgress = appContext.getString(R.string.settings_syncing_preparing),
                 syncingProviderName = providerName
             )
@@ -198,14 +213,15 @@ internal class SettingsSyncActions(
         // "Sync Now" should only fetch sections the user can actually see. EPG only feeds the
         // Live TV guide and the standalone Guide screen, so skip it when both are hidden.
         val visible = uiState.value.appTopLevelDestinations.toSet()
+        // Movies/Series first so their catalogs (and search) populate before Live TV.
         return buildList {
-            if (AppTopLevelDestination.LIVE_TV in visible) add(ProviderSyncSelection.TV)
             if (AppTopLevelDestination.MOVIES in visible) add(ProviderSyncSelection.MOVIES)
             if (AppTopLevelDestination.SERIES in visible &&
                 (provider?.type == ProviderType.XTREAM_CODES || provider?.type == ProviderType.STALKER_PORTAL)
             ) {
                 add(ProviderSyncSelection.SERIES)
             }
+            if (AppTopLevelDestination.LIVE_TV in visible) add(ProviderSyncSelection.TV)
             if (AppTopLevelDestination.LIVE_TV in visible || AppTopLevelDestination.GUIDE in visible) {
                 add(ProviderSyncSelection.EPG)
             }
