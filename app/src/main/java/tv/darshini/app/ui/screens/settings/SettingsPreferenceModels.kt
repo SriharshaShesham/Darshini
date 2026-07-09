@@ -12,6 +12,7 @@ import tv.darshini.domain.model.AppTopLevelDestination
 import tv.darshini.domain.model.AudioOutputPreference
 import tv.darshini.domain.model.Category
 import tv.darshini.domain.model.SyncCadence
+import tv.darshini.data.sync.SyncRepairSection
 import tv.darshini.domain.model.ExternalPlaybackMode
 import tv.darshini.domain.model.ChannelNumberingMode
 import tv.darshini.domain.model.DecoderMode
@@ -93,6 +94,7 @@ internal data class SettingsPreferenceSnapshot(
     val liveTvChannelMode: LiveTvChannelMode,
     val showLiveSourceSwitcher: Boolean,
     val useSideNavigation: Boolean,
+    val syncOnStartSections: Set<SyncRepairSection>,
     val showAllChannelsCategory: Boolean,
     val showRecentChannelsCategory: Boolean,
     val remoteShortcutPreferences: RemoteShortcutPreferences,

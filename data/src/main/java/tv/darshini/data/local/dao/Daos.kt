@@ -2695,6 +2695,9 @@ interface EpisodeDao {
     @Query("UPDATE episodes SET watch_progress = 0, last_watched_at = 0")
     suspend fun resetAllWatchProgress()
 
+    @Query("UPDATE episodes SET watch_progress = 0, last_watched_at = 0 WHERE series_id = :seriesId AND provider_id = :providerId")
+    suspend fun resetWatchProgressForSeries(seriesId: Long, providerId: Long)
+
     @Query("DELETE FROM episodes WHERE series_id = :seriesId")
     suspend fun deleteBySeries(seriesId: Long)
 
@@ -3302,6 +3305,9 @@ interface PlaybackHistoryDao {
 
     @Query("DELETE FROM playback_history WHERE content_id = :contentId AND content_type = :contentType AND provider_id = :providerId")
     suspend fun delete(contentId: Long, contentType: String, providerId: Long)
+
+    @Query("DELETE FROM playback_history WHERE series_id = :seriesId AND content_type = 'SERIES_EPISODE' AND provider_id = :providerId")
+    suspend fun deleteBySeries(seriesId: Long, providerId: Long)
 
     @Query("DELETE FROM playback_history")
     suspend fun deleteAll()

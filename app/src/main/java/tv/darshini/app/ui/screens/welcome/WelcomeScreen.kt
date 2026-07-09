@@ -91,11 +91,17 @@ class WelcomeViewModel @Inject constructor(
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     init {
+        android.util.Log.i("ColdStartDbg", "WelcomeViewModel.init START t=${System.currentTimeMillis()}")
         viewModelScope.launch {
+            android.util.Log.i("ColdStartDbg", "maybeSeedDevProvider START t=${System.currentTimeMillis()}")
             maybeSeedDevProvider()
+            android.util.Log.i("ColdStartDbg", "maybeSeedDevProvider END t=${System.currentTimeMillis()}")
             providerRepository.getProviders()
                 .map { it.isNotEmpty() }
-                .collect { _hasProviders.value = it }
+                .collect {
+                    android.util.Log.i("ColdStartDbg", "getProviders first emission t=${System.currentTimeMillis()} hasProviders=$it")
+                    _hasProviders.value = it
+                }
         }
         viewModelScope.launch {
             _hasProviders

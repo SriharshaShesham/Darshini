@@ -55,9 +55,17 @@ internal fun SettingsScreenDialogs(
     val providerState = rememberSettingsProviderSectionState(dialogState)
 
     SyncingOverlay(
-        isSyncing = uiState.isSyncing,
+        isSyncing = uiState.isSyncing && !uiState.syncOverlayDismissed,
         providerName = uiState.syncingProviderName,
-        progress = uiState.syncProgress
+        progress = uiState.syncProgress,
+        // Only offer "sync in background" for real provider catalog syncs (they set
+        // syncingProviderName); quick busy states like clear-history/export shouldn't
+        // be interruptible.
+        onSyncInBackground = if (uiState.syncingProviderName != null) {
+            { viewModel.dismissSyncOverlay() }
+        } else {
+            null
+        }
     )
 
     if (dialogState.showLiveTvModeDialog) {

@@ -38,6 +38,12 @@ internal class SettingsProviderActions(
         val AUTO_SWITCH_SYNC_STALE_AFTER_MS = 24.hours.inWholeMilliseconds
     }
 
+    // Sync keeps running in the ViewModel scope regardless; this only hides the blocking
+    // overlay so the user can navigate away while it finishes.
+    fun dismissSyncOverlay() {
+        uiState.update { it.copy(syncOverlayDismissed = true) }
+    }
+
     fun setActiveProvider(scope: CoroutineScope, providerId: Long) {
         scope.launch {
             // Validate the provider exists before writing any preferences.
@@ -247,11 +253,19 @@ internal class SettingsProviderActions(
         syncMode: SettingsProviderSyncMode = SettingsProviderSyncMode.SYNC_NOW,
         progressPrefix: String? = null
     ) {
+        // Reentrancy guard: a second concurrent sync would flip isSyncing/syncProgress
+        // independently of the first, and whichever finishes first clobbers that shared
+        // state even while the other is still running — the sync appears to do nothing.
+        if (uiState.value.isSyncing) {
+            uiState.update { it.copy(userMessage = "A sync is already running in the background.") }
+            return
+        }
         scope.launch {
             val providerName = providerRepository.getProvider(providerId)?.name
             uiState.update {
                 it.copy(
                     isSyncing = true,
+                    syncOverlayDismissed = false,
                     syncingProviderName = providerName,
                     syncProgress = progressPrefix ?: "Preparing sync..."
                 )

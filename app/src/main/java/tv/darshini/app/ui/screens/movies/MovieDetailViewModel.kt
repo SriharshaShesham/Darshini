@@ -57,6 +57,8 @@ class MovieDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(MovieDetailUiState())
     val uiState: StateFlow<MovieDetailUiState> = _uiState.asStateFlow()
 
+    private var loadedProviderId: Long? = null
+
     init {
         loadMovieDetails()
     }
@@ -213,7 +215,17 @@ class MovieDetailViewModel @Inject constructor(
         }
     }
 
+    fun removeFromWatchHistory() {
+        val movie = _uiState.value.movie ?: return
+        val providerId = loadedProviderId ?: return
+        viewModelScope.launch {
+            playbackHistoryRepository.removeFromHistory(movie.id, ContentType.MOVIE, providerId)
+            _uiState.update { it.copy(hasResume = false, resumePositionMs = 0L) }
+        }
+    }
+
     private suspend fun applyLoadedMovie(providerId: Long, movie: Movie) {
+        loadedProviderId = providerId
         val playbackHistory = playbackHistoryRepository.getPlaybackHistory(
             contentId = movie.id,
             contentType = ContentType.MOVIE,

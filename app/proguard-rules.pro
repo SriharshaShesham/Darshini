@@ -53,6 +53,10 @@
 -keep class tv.darshini.domain.model.** { *; }
 -keep class tv.darshini.data.local.entity.** { *; }
 -keep class tv.darshini.data.remote.xtream.model.** { *; }
+# Backup/restore DTOs (BackupData & friends) are Gson-serialized by field name but
+# live in domain.manager, not domain.model — without this, R8 renames the fields and
+# "Import data" produces an empty object in release builds.
+-keep class tv.darshini.domain.manager.** { *; }
 
 # ── Security / TLS ──────────────────────────────────────────
 -keepnames class tv.darshini.data.security.CredentialCrypto

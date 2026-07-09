@@ -155,7 +155,8 @@ interface CatalogSyncDao {
             provider_id,
             is_adult,
             is_user_protected,
-            sync_fingerprint
+            sync_fingerprint,
+            is_partial_sync
         )
         SELECT
             stage.category_id,
@@ -165,7 +166,8 @@ interface CatalogSyncDao {
             stage.provider_id,
             stage.is_adult,
             0,
-            stage.sync_fingerprint
+            stage.sync_fingerprint,
+            0
         FROM category_import_stage AS stage
         WHERE stage.session_id = :sessionId
           AND stage.provider_id = :providerId

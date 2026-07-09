@@ -13,6 +13,7 @@ import tv.darshini.domain.model.AppTimeFormat
 import tv.darshini.domain.model.AudioOutputPreference
 import tv.darshini.domain.model.ChannelNumberingMode
 import tv.darshini.domain.model.SyncCadence
+import tv.darshini.data.sync.SyncRepairSection
 import tv.darshini.domain.model.DecoderMode
 import tv.darshini.domain.model.ExternalPlaybackMode
 import tv.darshini.domain.model.GroupedChannelLabelMode
@@ -91,6 +92,7 @@ internal fun observeSettingsPreferenceSnapshot(
             liveTvChannelMode = LiveTvChannelMode.PRO,
             showLiveSourceSwitcher = false,
             useSideNavigation = true,
+            syncOnStartSections = SyncRepairSection.values().toSet(),
             showAllChannelsCategory = true,
             showRecentChannelsCategory = true,
             remoteShortcutPreferences = tv.darshini.domain.model.RemoteShortcutPreferences(),
@@ -216,6 +218,8 @@ internal fun observeSettingsPreferenceSnapshot(
         snapshot.copy(showLiveSourceSwitcher = showLiveSourceSwitcher)
     }.combine(preferencesRepository.useSideNavigation) { snapshot, useSideNavigation ->
         snapshot.copy(useSideNavigation = useSideNavigation)
+    }.combine(preferencesRepository.syncOnStartSections) { snapshot, syncOnStartSections ->
+        snapshot.copy(syncOnStartSections = syncOnStartSections)
     }.combine(preferencesRepository.showAllChannelsCategory) { snapshot, showAllChannelsCategory ->
         snapshot.copy(showAllChannelsCategory = showAllChannelsCategory)
     }.combine(preferencesRepository.showRecentChannelsCategory) { snapshot, showRecentChannelsCategory ->

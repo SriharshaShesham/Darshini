@@ -113,6 +113,8 @@ class ProviderSyncWorker(
             )
             val requestedProviderId = inputData.getLong(KEY_PROVIDER_ID, INVALID_PROVIDER_ID)
             val forceRefresh = inputData.getBoolean(KEY_FORCE, false)
+            val forceSectionNames = inputData.getStringArray(KEY_SECTIONS)?.toSet().orEmpty()
+            val forceSections = SyncRepairSection.values().filter { it.name in forceSectionNames }.toSet()
             val providers = if (requestedProviderId != INVALID_PROVIDER_ID) {
                 entryPoint.providerDao().getById(requestedProviderId)?.let(::listOf).orEmpty()
             } else {
@@ -135,11 +137,27 @@ class ProviderSyncWorker(
                         trackInitialLiveOnboarding = trackInitialLiveOnboarding
                     )
                 } else if (forceRefresh && provider.isActive) {
-                    entryPoint.syncManager().sync(
-                        provider.id,
-                        force = true,
-                        trackInitialLiveOnboarding = trackInitialLiveOnboarding
-                    )
+                    if (forceSections.isEmpty() || forceSections.size == SyncRepairSection.values().size) {
+                        entryPoint.syncManager().sync(
+                            provider.id,
+                            force = true,
+                            trackInitialLiveOnboarding = trackInitialLiveOnboarding
+                        )
+                    } else {
+                        // "Sync on start" limited to the sections the user selected: sync each
+                        // chosen section one at a time (skips Live/EPG when not selected).
+                        var sectionResult: tv.darshini.domain.model.Result<Unit> =
+                            tv.darshini.domain.model.Result.Success(Unit)
+                        for (section in SyncRepairSection.values()) {
+                            if (section !in forceSections) continue
+                            val r = entryPoint.syncManager().retrySection(provider.id, section)
+                            if (r is tv.darshini.domain.model.Result.Error) {
+                                sectionResult = r
+                                break
+                            }
+                        }
+                        sectionResult
+                    }
                 } else if (provider.type == ProviderType.XTREAM_CODES) {
                     syncXtreamProviderIfStale(entryPoint, provider)
                 } else if (provider.type == ProviderType.STALKER_PORTAL) {
@@ -185,6 +203,7 @@ class ProviderSyncWorker(
         private const val UNIQUE_PROVIDER_WORK_PREFIX = "provider-sync-provider-"
         private const val KEY_PROVIDER_ID = "provider_id"
         private const val KEY_FORCE = "force_refresh"
+        private const val KEY_SECTIONS = "sync_sections"
         private const val INVALID_PROVIDER_ID = -1L
 
         fun enqueuePeriodic(context: Context) {
@@ -213,9 +232,18 @@ class ProviderSyncWorker(
             WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_WORK_NAME)
         }
 
-        fun enqueueLaunchStaleCheck(context: Context, force: Boolean = false) {
+        fun enqueueLaunchStaleCheck(
+            context: Context,
+            force: Boolean = false,
+            sections: Set<SyncRepairSection>? = null
+        ) {
             val request = OneTimeWorkRequestBuilder<ProviderSyncWorker>()
-                .setInputData(workDataOf(KEY_FORCE to force))
+                .setInputData(
+                    workDataOf(
+                        KEY_FORCE to force,
+                        KEY_SECTIONS to (sections?.map { it.name }?.toTypedArray() ?: emptyArray<String>())
+                    )
+                )
                 .setConstraints(
                     Constraints.Builder()
                         .setRequiredNetworkType(NetworkType.CONNECTED)

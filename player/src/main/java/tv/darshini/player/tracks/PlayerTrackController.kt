@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import androidx.media3.common.C
 import androidx.media3.common.Format
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
@@ -99,6 +100,12 @@ class PlayerTrackController(
                             else -> TrackType.VIDEO
                         },
                         isSelected = if (isVideo) selectedVideoTrackId == id else group.isTrackSelected(index)
+                    )
+                    android.util.Log.d(
+                        "SeekDbg",
+                        "TRACK type=$type name='${track.name}' label='${format.label}' lang='${format.language}' " +
+                            "mime='${format.sampleMimeType}' codecs='${format.codecs}' " +
+                            "wxh=${format.width}x${format.height} ch=${format.channelCount} bitrate=${format.bitrate}"
                     )
                     when {
                         isAudio && group.isTrackSupported(index, false) -> audioTracks += track
@@ -217,39 +224,72 @@ class PlayerTrackController(
         val explicitLabel = format.label
             ?.trim()
             ?.takeIf { it.isNotBlank() && !it.matches(Regex("(?i)^track\\s*\\d+$")) }
-        if (explicitLabel != null) return explicitLabel
 
-        val parts = mutableListOf<String>()
-        format.language
+        val languageDisplay = format.language
             ?.takeIf { it.isNotBlank() && it != C.LANGUAGE_UNDETERMINED }
             ?.let { code ->
                 val locale = Locale.forLanguageTag(code)
-                val display = locale.getDisplayLanguage(Locale.getDefault())
-                    .takeIf { it.isNotBlank() }
-                    ?: locale.displayLanguage.takeIf { it.isNotBlank() }
-                if (!display.isNullOrBlank()) {
-                    parts += display.replaceFirstChar {
+                (locale.getDisplayLanguage(Locale.getDefault()).takeIf { it.isNotBlank() }
+                    ?: locale.displayLanguage.takeIf { it.isNotBlank() })
+                    ?.replaceFirstChar {
                         if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
                     }
-                }
             }
 
-        if (trackType == C.TRACK_TYPE_TEXT) {
-            if ((format.selectionFlags and C.SELECTION_FLAG_FORCED) != 0) parts += "Forced"
-            if ((format.roleFlags and C.ROLE_FLAG_CAPTION) != 0) parts += "CC"
-            if ((format.roleFlags and C.ROLE_FLAG_DESCRIBES_MUSIC_AND_SOUND) != 0) parts += "SDH"
+        if (trackType == C.TRACK_TYPE_AUDIO) {
+            // Language is the user-facing name — show it first. Channel layout and codec
+            // only disambiguate multiple tracks in the same language. The provider label
+            // (often just a codec string like "AC3") is a last resort, not the default.
+            val parts = mutableListOf<String>()
+            languageDisplay?.let { parts += it }
+            audioChannelLabel(format.channelCount)?.let { parts += it }
+            audioCodecLabel(format)?.let { parts += it }
+            return when {
+                parts.isNotEmpty() -> parts.joinToString(" · ")
+                explicitLabel != null -> explicitLabel
+                else -> "Audio ${index + 1}"
+            }
         }
 
-        if (parts.isNotEmpty()) return parts.joinToString(" ")
-        return when (trackType) {
-            C.TRACK_TYPE_AUDIO -> "Audio ${index + 1}"
-            C.TRACK_TYPE_TEXT -> "Subtitle ${index + 1}"
-            else -> "Track ${index + 1}"
+        // Subtitles / text: language is the real value. Provider labels are frequently junk
+        // (e.g. a site name), so they are a last resort — not the default.
+        val parts = mutableListOf<String>()
+        languageDisplay?.let { parts += it }
+        if ((format.selectionFlags and C.SELECTION_FLAG_FORCED) != 0) parts += "Forced"
+        if ((format.roleFlags and C.ROLE_FLAG_CAPTION) != 0) parts += "CC"
+        if ((format.roleFlags and C.ROLE_FLAG_DESCRIBES_MUSIC_AND_SOUND) != 0) parts += "SDH"
+        return when {
+            parts.isNotEmpty() -> parts.joinToString(" ")
+            explicitLabel != null -> explicitLabel
+            else -> "Subtitle ${index + 1}"
         }
     }
 
+    private fun audioChannelLabel(channelCount: Int): String? = when {
+        channelCount <= 0 -> null
+        channelCount == 1 -> "Mono"
+        channelCount == 2 -> "Stereo"
+        channelCount == 6 -> "5.1"
+        channelCount == 8 -> "7.1"
+        else -> "${channelCount}ch"
+    }
+
+    private fun audioCodecLabel(format: Format): String? = when (format.sampleMimeType) {
+        MimeTypes.AUDIO_AC3 -> "AC3"
+        MimeTypes.AUDIO_E_AC3, MimeTypes.AUDIO_E_AC3_JOC -> "EAC3"
+        MimeTypes.AUDIO_AC4 -> "AC4"
+        MimeTypes.AUDIO_DTS -> "DTS"
+        MimeTypes.AUDIO_DTS_HD -> "DTS-HD"
+        MimeTypes.AUDIO_TRUEHD -> "TrueHD"
+        MimeTypes.AUDIO_AAC -> "AAC"
+        MimeTypes.AUDIO_MPEG, MimeTypes.AUDIO_MPEG_L2 -> "MP3"
+        MimeTypes.AUDIO_OPUS -> "Opus"
+        MimeTypes.AUDIO_VORBIS -> "Vorbis"
+        MimeTypes.AUDIO_FLAC -> "FLAC"
+        else -> null
+    }
+
     private fun buildVideoTrackName(format: Format, index: Int): String {
-        val parts = mutableListOf<String>()
         val explicitLabel = format.label
             ?.trim()
             ?.takeIf { it.isNotBlank() && !it.matches(Regex("(?i)^track\\s*\\d+$")) }
@@ -260,11 +300,16 @@ class PlayerTrackController(
         }
         val bitrateLabel = format.bitrate.takeIf { it > 0 }
             ?.let { bitrate -> String.format(Locale.US, "%.1f Mbps", bitrate / 1_000_000f) }
-        explicitLabel?.let(parts::add)
-        if (!resolutionLabel.isNullOrBlank() && parts.none { it.contains(resolutionLabel, true) }) parts += resolutionLabel
-        if (!bitrateLabel.isNullOrBlank()) parts += bitrateLabel
-        return parts.firstOrNull()?.takeIf { parts.size == 1 }
-            ?: parts.joinToString(" · ").ifBlank { "Quality ${index + 1}" }
+        // Resolution/bitrate are the real values. Provider labels are often junk (a site
+        // name), so use the label only when no resolution is available.
+        val parts = mutableListOf<String>()
+        resolutionLabel?.let { parts += it }
+        bitrateLabel?.let { parts += it }
+        return when {
+            parts.isNotEmpty() -> parts.joinToString(" · ")
+            explicitLabel != null -> explicitLabel
+            else -> "Quality ${index + 1}"
+        }
     }
 }
 

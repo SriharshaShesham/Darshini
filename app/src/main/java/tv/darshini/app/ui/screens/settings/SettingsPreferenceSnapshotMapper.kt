@@ -58,6 +58,7 @@ internal fun SettingsUiState.applyPreferenceSnapshot(snapshot: SettingsPreferenc
         liveTvChannelMode = snapshot.liveTvChannelMode,
         showLiveSourceSwitcher = snapshot.showLiveSourceSwitcher,
         useSideNavigation = snapshot.useSideNavigation,
+        syncOnStartSections = snapshot.syncOnStartSections,
         showAllChannelsCategory = snapshot.showAllChannelsCategory,
         showRecentChannelsCategory = snapshot.showRecentChannelsCategory,
         remoteShortcutPreferences = snapshot.remoteShortcutPreferences,
