@@ -331,6 +331,10 @@
     <string name="settings_add_provider">Add Provider</string>
     <string name="settings_sync_cadence_title">Automatic sync</string>
     <string name="settings_sync_cadence_label">Refresh content on launch</string>
+    <string name="settings_sync_content_label">Sync Content</string>
+    <string name="settings_sync_content_description">Only sections you\'ve made visible are synced. Hidden sections are skipped.</string>
+    <string name="settings_sync_content_checkbox_hint">Checked sections refresh on every launch. Unchecked sections keep their current content until you sync manually.</string>
+    <string name="settings_sync_section_hidden_note">This section is hidden. Make it visible in Section Visibility to sync it.</string>
     <string name="settings_sync_cadence_every_launch">Every launch</string>
     <string name="settings_sync_cadence_1_day">Every day</string>
     <string name="settings_sync_cadence_2_days">Every 2 days</string>
@@ -738,7 +742,11 @@
     <string name="settings_app_language">App Language</string>
     <string name="settings_system_default">System Default</string>
     <string name="settings_select_language">Select Language</string>
-    <string name="settings_ui">UI</string>
+    <string name="settings_ui">General</string>
+    <string name="settings_sync_section_movies">Movies</string>
+    <string name="settings_sync_section_series">Series</string>
+    <string name="settings_sync_section_live">Live</string>
+    <string name="settings_sync_section_epg">EPG (Guide)</string>
     <string name="settings_app_theme">App Theme</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
@@ -1502,6 +1510,7 @@
     <string name="movie_detail_play">Play</string>
     <string name="movie_detail_continue">Continue</string>
     <string name="movie_detail_resume_from">Resume from %1$s</string>
+    <string name="content_detail_unwatch">Unwatch</string>
     <string name="movie_detail_versions">Versions</string>
     <string name="movie_detail_trailer">Trailer</string>
     <string name="movie_detail_related">More Like This</string>

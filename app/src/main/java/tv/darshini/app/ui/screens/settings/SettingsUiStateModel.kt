@@ -19,6 +19,7 @@ import tv.darshini.domain.model.Category
 import tv.darshini.domain.model.CategorySortMode
 import tv.darshini.domain.model.ChannelNumberingMode
 import tv.darshini.domain.model.SyncCadence
+import tv.darshini.data.sync.SyncRepairSection
 import tv.darshini.domain.model.CombinedM3uProfile
 import tv.darshini.domain.model.ContentType
 import tv.darshini.domain.model.DecoderMode
@@ -130,6 +131,7 @@ data class SettingsUiState(
     val liveTvChannelMode: LiveTvChannelMode = LiveTvChannelMode.PRO,
     val showLiveSourceSwitcher: Boolean = false,
     val useSideNavigation: Boolean = false,
+    val syncOnStartSections: Set<SyncRepairSection> = SyncRepairSection.values().toSet(),
     val showAllChannelsCategory: Boolean = true,
     val showRecentChannelsCategory: Boolean = true,
     val remoteShortcutPreferences: RemoteShortcutPreferences = RemoteShortcutPreferences(),

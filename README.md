@@ -9,66 +9,43 @@ Darshini is a TV-first IPTV player for Android TV built with Kotlin, Jetpack Com
 
 ## Features
 
-This app includes several custom modifications and enhanced features to deliver a premium, personalized viewing experience along with the  features from the original development from StreamVault.
+Darshini keeps everything from the upstream **StreamVault** base and layers the additions and changes below on top of it. This section covers what is unique to Darshini; see **Complete Features** further down for the full combined list.
 
+---
 
-### 1. Collapsible Sidebar & Navigation Options
-- **Hamburger Toggle**: A hamburger icon at the top of the left sidebar lets you manually collapse it to icon-only view (72dp) or expand it to full width (240dp) with a smooth animation. State persists as you navigate between screens.
-- **Focus-based Expand/Collapse**: The left sidebar navigation automatically expands to show text labels when focused, and collapses to show icons only when focus moves to content.
-- **Top Bar vs. Sidebar Switch**: You can toggle the primary navigation layout between a traditional Top Navigation Bar and the Collapsible Left Sidebar.
-  - **Steps**: Go to **Settings** -> **Interface/Navigation Options** and toggle the navigation style.
+### Navigation & TV UX
+- **Collapsible Sidebar & Navigation Switch**: A hamburger toggle collapses the left sidebar to icon-only (72dp) or expands it to full labels (240dp) with a smooth animation; it also auto-expands on focus and collapses when focus moves to content. You can switch the primary navigation between a Top Bar and the Collapsible Sidebar, and the choice persists across screens.
+  - **Steps**: **Settings → Interface/Navigation Options** to switch the navigation style.
+- **Focus Restore After Back-Navigation**: Open a movie or series and press back — focus returns to the exact poster you opened instead of snapping to the top or the sidebar, with your category rows and scroll position preserved.
+- **Category Detail Header + Scroll Restore**: Category grids show a header row (back arrow · category name · on-demand sync icon) in place of the old chip navigation, and pressing back restores your exact scroll position in the preview list.
+- **Submit-Only D-pad Search**: Typing only updates the field; the database query runs on DPAD_CENTER/ENTER, so search stays fast and responsive on a remote.
 
-### 2. Custom App Themes
-- **Multiple Color Palettes**: Choose between standard and glass-morphed themes directly within the interface. Supported profiles:
-- **Glass (Dark)** (Default) & **Glass (Light)**: Modern frosted glass overlays with spotlight focus outlines.
-- **Dark** & **Light**: Traditional solid layout palettes for high-contrast visibility.
-- **System Default**: Adapts dynamically to your Android TV's system appearance.
-- **Steps**: Go to **Settings** -> **UI** -> **App Theme** to choose your style.
+---
 
-### 2. Custom Playlist & Category Arrangement
-- **Manual Ordering**: Arrange the order of your movie, series, and live categories exactly how you want them (e.g., place your preferred languages or categories at the top).
-- **Visibility Toggle**: Hide unused or unwanted categories with an eye icon. Changes apply immediately — no Save button required.
-- **Sync Performance**: Hidden categories are skipped during background sync, so hiding unused categories reduces sync time and data usage.
-- **Category Control in UI Settings**: The Category Control panel has moved to **Settings → UI** so you can access it independently of the provider settings page.
-  - **Steps**:
-    1. Navigate to **Settings** → **UI** → **Category Control**.
-    2. Use the **Up/Down/Top** arrow icons to reorder categories or the **Eye** icon to toggle visibility.
-    3. Choose the **Custom Order** sort mode in the category sort settings to activate your custom ordering.
+### Catalog & Categories
+- **Custom Category Ordering & Visibility**: Reorder movie/series/live categories (Up/Down/Top) and hide unwanted ones with an eye icon. Changes auto-save — no Save button.
+  - **Steps**: **Settings → UI → Category Control**; pick the **Custom Order** sort mode to activate your ordering.
+- **Faster Sync via Hidden Categories**: Hidden categories are skipped during background sync, reducing sync time and data usage.
+- **Per-Category On-Demand Sync**: Every Movies/Series category row — and its long-press options dialog — has a **Sync** button that fetches that category's full catalog on demand. Background sync fetches a fast top-items preview first so the app loads quickly after setup.
 
-### 3. Provider Details Export & Import
-- **Decrypted Export**: Export your complete provider configurations (with passwords securely decrypted) to reuse them on other devices.
-  - **Steps**:
-    1. Go to **Settings** -> **Provider Settings** and select the provider you want to back up.
-    2. Click the **Export** button.
-    3. The file will be saved directly to your `/sdcard/Download/` folder (or app-private folders as fallback) as a `.json` file.
-- **Restore / Import**:
-  - **Steps**:
-    1. Go to **Add Provider** -> **Restore Data**.
-    2. Choose the exported JSON file from your `Download` directory to restore your login credentials instantly.
+---
 
-### 4. VOD Favorites Quick Toggle
-- **Long-Click Shortcut**: Easily add or remove movie/series cards from your favorites by holding the enter/select button (long-click).
-- **Favorites Shelf**: Your favorites are pinned unconditionally as a dedicated row for quick access.
+### Playback & Watchlist
+- **Next Episode + External Player**: A **Next Episode** button sits beside fast-forward when watching a series, and you can hand playback off to an external player like VLC or MX Player.
+  - **Steps**: **Settings → Player Options → External Playback Mode**.
+- **VOD Favorites Quick Toggle**: Long-press (hold select) a movie/series card to add or remove it from favorites; favorites are pinned as a dedicated shelf.
+- **Remove from Watch History**: Two ways to clear watched items so they stop reappearing:
+  - **Long-press** any tile in a **Continue Watching** row (Home, Movies, Series) to remove it.
+  - An **Unwatch** button on the movie/series **detail screen**, shown next to Continue/Resume when you have progress. On a movie it clears that title; on a series it clears the **entire series'** history and removes it from Continue Watching.
 
-### 5. Playback Enhancements
-- **Next Episode Shortcut**: Added a "Next Episode" button directly next to the fast forward button in the player control bar when watching series.
-- **External Player Support**: Option to switch the built-in media player with external players like VLC or MX Player.
-  - **Steps**: Toggle the Player settings under **Settings** -> **Player Options** -> **External Playback Mode**.
+---
 
-### 7. Category Detail Navigation Header
-- **Proper Navigation Header**: When browsing a category grid (Movies or Series), a header row replaces the old chip-based navigation. It shows a **back arrow** on the left, the **category name** in the center, and a **sync icon** on the right for on-demand refresh.
-- **Scroll Position Restore**: Pressing back from a category grid returns you to exactly where you were in the preview rows list — scroll position is preserved.
-
-### 6. Per-Category On-Demand Sync
-- **Sync Button on Category Rows**: Every Movies and Series category row displays a **Sync** button alongside the "See All" button. Pressing it fetches the complete catalog for that category on demand, without waiting for a full provider sync.
-- **Smart Background Preview Sync**: The default background sync fetches a fast preview of the top items per category so the app loads quickly after setup. Use the per-category Sync button whenever you want the full listing for a specific category.
-- **Category Options Dialog**: Long-press any category header to open its options. A new **Sync Category** action is available there as an alternative to the row button.
-
-### 8. Focus Restore After Opening a Movie/Series
-- **Return to Where You Were**: When you open a movie or series from a category row and press back from the detail screen, focus returns to the exact poster you opened — no more snapping to the top or the sidebar. Your paged-in category rows and scroll position are preserved across the trip.
-
-### 9. Remove from Continue Watching
-- **Unwatch Shortcut**: Long-press (hold the enter/select button) any tile in a **Continue Watching** row to remove it from your history, so finished or unwanted items stop reappearing. Works on the Home, Movies, and Series screens.
+### Personalization & Identity
+- **Darshini Branding**: A refreshed identity — a peacock-feather TV launcher icon, a gold "Darshini" wordmark banner, and a white splash screen.
+- **Custom App Themes**: **Glass (Dark)** (default) & **Glass (Light)** frosted-glass palettes with spotlight focus outlines, plus solid **Dark**, **Light**, and **System Default**.
+  - **Steps**: **Settings → UI → App Theme**.
+- **Provider Details Export & Import**: Export a provider's full configuration (passwords decrypted) to a `.json` in your Downloads, then restore it on another device.
+  - **Steps**: Export from **Settings → Provider Settings → Export**; restore from **Add Provider → Restore Data**.
 
 ---
 
@@ -199,6 +176,7 @@ This app includes several custom modifications and enhanced features to deliver 
 - Two VOD layouts: Modern shelf-based browsing or Classic left-sidebar category browsing
 - Detailed info pages for movies and series
 - Continue watching, playback history, and detail-screen resume actions with saved position context
+- Remove from watch history: an **Unwatch** button on the movie/series detail screen (movie clears that title; series clears the entire series) plus long-press removal on Continue Watching rows
 - In-player episode switching for series
 - Automatic next-episode playback
 - Per-category on-demand Sync button on every category row and in the category options dialog to fetch the full catalog for a single category without triggering a full provider sync

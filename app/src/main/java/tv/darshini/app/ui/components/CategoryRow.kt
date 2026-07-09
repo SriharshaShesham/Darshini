@@ -3,10 +3,12 @@ package tv.darshini.app.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -135,7 +137,11 @@ fun <T : Any> CategoryRow(
             )
         }
 
+        // Persist horizontal scroll per row (keyed by title) so returning from a detail
+        // screen re-composes the opened tile and its FocusRequester can re-attach.
+        val rowState = rememberSaveable(title, saver = LazyListState.Saver) { LazyListState() }
         LazyRow(
+            state = rowState,
             modifier = Modifier.focusRestorer(),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)

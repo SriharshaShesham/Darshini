@@ -101,9 +101,21 @@ class StreamVaultApp : Application(), SingletonImageLoader.Factory {
                 ProviderSyncWorker.enqueuePeriodic(this@StreamVaultApp)
                 val now = System.currentTimeMillis()
                 val lastSync = preferencesRepository.lastLaunchSyncTimestamp.first() ?: 0L
-                if (cadence.isLaunchSyncDue(lastSync, now)) {
+                // Sync only sections whose top-level destination is visible. For "Every launch" the
+                // user narrows this further via the Sync Content checkboxes; other cadences sync all visible.
+                val visibleSections = visibleSyncSections(preferencesRepository.appTopLevelDestinations.first())
+                val startSections = if (cadence == SyncCadence.EVERY_LAUNCH) {
+                    preferencesRepository.syncOnStartSections.first() intersect visibleSections
+                } else {
+                    visibleSections
+                }
+                if (startSections.isNotEmpty() && cadence.isLaunchSyncDue(lastSync, now)) {
                     preferencesRepository.setLastLaunchSyncTimestamp(now)
-                    ProviderSyncWorker.enqueueLaunchStaleCheck(this@StreamVaultApp, force = true)
+                    ProviderSyncWorker.enqueueLaunchStaleCheck(
+                        this@StreamVaultApp,
+                        force = true,
+                        sections = startSections
+                    )
                 }
             }
         }

@@ -592,6 +592,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setSyncOnStartSections(sections: Set<SyncRepairSection>) {
+        viewModelScope.launch {
+            preferencesRepository.setSyncOnStartSections(sections)
+        }
+    }
+
     fun setShowAllChannelsCategory(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setShowAllChannelsCategory(enabled)

@@ -249,6 +249,14 @@ class SeriesDetailViewModel @Inject constructor(
         }
     }
 
+    fun removeFromWatchHistory() {
+        val series = _uiState.value.series ?: return
+        viewModelScope.launch {
+            playbackHistoryRepository.removeSeriesFromHistory(series.id, series.providerId)
+            loadSeriesDetailsForProvider(series.providerId, series.id)
+        }
+    }
+
     private fun findResumeEpisode(series: Series): Episode? {
         val ordered = series.seasons
             .sortedBy { it.seasonNumber }
