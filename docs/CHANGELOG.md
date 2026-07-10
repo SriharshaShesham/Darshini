@@ -2,17 +2,23 @@
 
 All notable product changes are recorded in this document.
 
-## [1.0.16] - 2026-07-09
+## [1.2] - 2026-07-09
 
 ### Added
 
 - Added an "Unwatch" button on the movie and series detail screens: on a movie it removes that title from your watch history and resume list; on a series it clears the entire series' watch history and removes it from Continue Watching. The button appears only when there is resume progress.
 - Refreshed app branding: a new peacock-feather TV launcher icon, a gold "Darshini" wordmark banner, and a white splash screen.
 
+### Changed
+
+- Reorganized launch syncing: the "Automatic sync" control moved from Provider settings into General and is now called "Sync Content". Choosing "Every launch" reveals per-section (Movies/Series/Live/EPG) checkboxes, and only sections you've made visible are synced — hidden sections are disabled with a note. Removed the redundant standalone "Sync on start" toggle (the "Manual" cadence now serves as off).
+
 ### Fixed
 
 - Fixed "Import Data" failing on release builds: R8 was renaming the backup data models (which live in `tv.darshini.domain.manager`) so imported files parsed as an empty backup. Added a ProGuard keep rule for those DTOs.
 - Fixed sidebar navigation from the Settings screen: selecting Movies/Home/etc. while a background sync was running did nothing and bounced focus back to Settings. Top-level navigation is no longer blocked by sync state.
+- Fixed focus restoration after backing out of a detail screen: focus now returns to the exact tile you opened, not just the row.
+- Fixed the focused-card border being hidden behind poster artwork, and made it use the theme's focus color for clear contrast in every theme (including the glass themes). Applied the same treatment to the "More Like This" row.
 
 ## [1.0.15] - 2026-06-13
 
