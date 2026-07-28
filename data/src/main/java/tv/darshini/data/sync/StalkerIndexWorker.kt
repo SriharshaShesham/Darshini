@@ -16,6 +16,7 @@ import androidx.work.WorkerParameters
 import tv.darshini.data.local.dao.ProviderDao
 import tv.darshini.domain.model.ContentType
 import tv.darshini.domain.model.ProviderType
+import tv.darshini.domain.sync.PlaybackActivitySignal
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -38,6 +39,11 @@ class StalkerIndexWorker(
     override suspend fun doWork(): Result {
         if (applicationContext.isCurrentlyLowOnMemoryForSync()) {
             Log.w(TAG, "Deferring Stalker index work: device low on memory")
+            return Result.retry()
+        }
+
+        if (PlaybackActivitySignal.isActive) {
+            Log.d(TAG, "Deferring Stalker index work: playback active")
             return Result.retry()
         }
 

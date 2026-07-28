@@ -14,7 +14,10 @@ internal data class PlaybackBufferPolicy(
     val targetBufferBytes: Int,
     val prioritizeTimeOverSizeThresholds: Boolean,
     val qualityReason: String = "baseline",
-    val lowMemoryCapped: Boolean = false
+    val lowMemoryCapped: Boolean = false,
+    // Retained content behind the playhead so short rewinds replay from RAM instead of re-fetching.
+    // VOD only; live stays 0 (no back-seeking a live edge).
+    val backBufferMs: Int = 0
 )
 
 internal object PlaybackBufferPolicies {
@@ -29,8 +32,14 @@ internal object PlaybackBufferPolicies {
     private const val LOW_MEMORY_LIVE_MAX_BUFFER_MS = 12_000
     private const val LOW_MEMORY_COMPAT_LIVE_MIN_BUFFER_MS = 6_000
     private const val LOW_MEMORY_COMPAT_LIVE_MAX_BUFFER_MS = 15_000
-    private const val LOW_MEMORY_VOD_MIN_BUFFER_MS = 15_000
-    private const val LOW_MEMORY_VOD_MAX_BUFFER_MS = 45_000
+    // VOD on "low memory" devices (memoryClass <= 256 flags most Android TV boxes). Throttled IPTV
+    // VOD bursts then rate-limits below the stream bitrate, so a 1s startup buffer stalls within
+    // seconds. Pre-buffer a large cushion to capture the burst and ride through the throttle.
+    private const val LOW_MEMORY_VOD_MIN_BUFFER_MS = 60_000
+    private const val LOW_MEMORY_VOD_MAX_BUFFER_MS = 120_000
+    private const val LOW_MEMORY_VOD_PLAYBACK_BUFFER_MS = 10_000
+    private const val LOW_MEMORY_VOD_REBUFFER_MS = 15_000
+    private const val LOW_MEMORY_VOD_TARGET_BUFFER_BYTES = 48 * 1024 * 1024
     private const val LOW_MEMORY_PLAYBACK_BUFFER_MS = 1_000
     private const val LOW_MEMORY_REBUFFER_MS = 3_000
 
@@ -44,6 +53,7 @@ internal object PlaybackBufferPolicies {
     private const val REBUFFER_MS = 5_000
     private const val VOD_PLAYBACK_BUFFER_MS = 8_000
     private const val VOD_REBUFFER_MS = 18_000
+    private const val VOD_BACK_BUFFER_MS = 30_000
     private const val MEDIUM_LIVE_MIN_BUFFER_MS = 15_000
     private const val MEDIUM_LIVE_MAX_BUFFER_MS = 45_000
     private const val MEDIUM_LIVE_PLAYBACK_BUFFER_MS = 3_000
@@ -173,9 +183,11 @@ internal object PlaybackBufferPolicies {
                 label = "lowmem-vod",
                 minBufferMs = LOW_MEMORY_VOD_MIN_BUFFER_MS,
                 maxBufferMs = LOW_MEMORY_VOD_MAX_BUFFER_MS,
-                playbackBufferMs = LOW_MEMORY_PLAYBACK_BUFFER_MS,
-                rebufferMs = LOW_MEMORY_REBUFFER_MS,
-                targetBufferBytes = DEFAULT_TARGET_BUFFER_BYTES,
+                playbackBufferMs = LOW_MEMORY_VOD_PLAYBACK_BUFFER_MS,
+                rebufferMs = LOW_MEMORY_VOD_REBUFFER_MS,
+                // Explicit byte ceiling so a high-bitrate VOD actually buffers to the ms target
+                // (captures the server's initial burst) instead of draining early on the default cap.
+                targetBufferBytes = LOW_MEMORY_VOD_TARGET_BUFFER_BYTES,
                 prioritizeTimeOverSizeThresholds = true
             )
         resolvedStreamType == ResolvedStreamType.MPEG_TS_LIVE ->
@@ -215,8 +227,11 @@ internal object PlaybackBufferPolicies {
                 maxBufferMs = VOD_MAX_BUFFER_MS,
                 playbackBufferMs = VOD_PLAYBACK_BUFFER_MS,
                 rebufferMs = VOD_REBUFFER_MS,
-                targetBufferBytes = DEFAULT_TARGET_BUFFER_BYTES,
-                prioritizeTimeOverSizeThresholds = true
+                // Explicit byte ceiling so high-bitrate remuxes actually buffer to the ms target
+                // instead of draining early on the default per-format byte cap.
+                targetBufferBytes = LARGE_LIVE_TARGET_BUFFER_BYTES,
+                prioritizeTimeOverSizeThresholds = true,
+                backBufferMs = VOD_BACK_BUFFER_MS
             )
     }
 

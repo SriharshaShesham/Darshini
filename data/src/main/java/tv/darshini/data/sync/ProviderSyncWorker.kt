@@ -26,6 +26,7 @@ import tv.darshini.domain.model.ProviderEpgSyncMode
 import tv.darshini.domain.model.ProviderType
 import tv.darshini.domain.model.SyncState
 import tv.darshini.domain.repository.SyncMetadataRepository
+import tv.darshini.domain.sync.PlaybackActivitySignal
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -106,6 +107,10 @@ class ProviderSyncWorker(
     }
 
     override suspend fun doWork(): Result {
+        if (PlaybackActivitySignal.isActive) {
+            Log.d(TAG, "Deferring provider sync: playback active")
+            return Result.retry()
+        }
         return try {
             val entryPoint = EntryPointAccessors.fromApplication(
                 applicationContext,

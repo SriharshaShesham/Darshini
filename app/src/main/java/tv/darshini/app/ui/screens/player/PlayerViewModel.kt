@@ -515,7 +515,8 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             activePlayerEngineFlow.flatMapLatest { it.retryStatus }.collect { status ->
                 status ?: return@collect
-                showRetryNotice(status)
+                // ponytail: VOD retries recover silently; live keeps the toast for zap decisions.
+                if (currentContentType == ContentType.LIVE) showRetryNotice(status)
             }
         }
         viewModelScope.launch {

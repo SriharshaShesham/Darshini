@@ -18,6 +18,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import java.util.concurrent.TimeUnit
+import tv.darshini.domain.sync.PlaybackActivitySignal
 
 class BackgroundEpgSyncWorker(
     appContext: Context,
@@ -42,6 +43,11 @@ class BackgroundEpgSyncWorker(
         // system. WorkManager will re-enqueue with backoff.
         if (applicationContext.isCurrentlyLowOnMemoryForSync()) {
             Log.w(TAG, "Deferring background EPG sync for provider $providerId: device low on memory")
+            return Result.retry()
+        }
+
+        if (PlaybackActivitySignal.isActive) {
+            Log.d(TAG, "Deferring background EPG sync for provider $providerId: playback active")
             return Result.retry()
         }
 

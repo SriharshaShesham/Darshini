@@ -32,6 +32,7 @@ import androidx.media3.session.MediaSession
 import tv.darshini.domain.model.AudioOutputPreference
 import tv.darshini.domain.model.DecoderMode
 import tv.darshini.domain.model.PlaybackBufferMode
+import tv.darshini.domain.sync.PlaybackActivitySignal
 import tv.darshini.domain.model.VodHttpProtocolMode
 import tv.darshini.domain.model.PlaybackCompatibilityKey
 import tv.darshini.domain.model.PlaybackCompatibilityRecord
@@ -397,6 +398,7 @@ class Media3PlayerEngine @Inject constructor(
 
     override fun prepare(streamInfo: StreamInfo) {
         if (ensureNotDisposed("prepare")) return
+        PlaybackActivitySignal.isActive = true
         prepareInternal(streamInfo = streamInfo, preserveRetryState = false, seekPositionMs = null, autoPlay = true)
     }
 
@@ -453,6 +455,7 @@ class Media3PlayerEngine @Inject constructor(
     }
 
     override fun stop() {
+        PlaybackActivitySignal.isActive = false
         retryJob?.cancel()
         exoPlayer?.stop()
         _playbackState.value = PlaybackState.IDLE
@@ -849,6 +852,7 @@ class Media3PlayerEngine @Inject constructor(
     }
 
     private fun resetEngineState(restartCollectors: Boolean) {
+        PlaybackActivitySignal.isActive = false
         retryJob?.cancel()
         retryJob = null
         preloadCoordinator.release()
@@ -1130,6 +1134,7 @@ class Media3PlayerEngine @Inject constructor(
             )
             .setTargetBufferBytes(bufferPolicy.targetBufferBytes)
             .setPrioritizeTimeOverSizeThresholds(bufferPolicy.prioritizeTimeOverSizeThresholds)
+            .setBackBuffer(bufferPolicy.backBufferMs, bufferPolicy.backBufferMs > 0)
             .build()
         val livePlaybackSpeedControl = DefaultLivePlaybackSpeedControl.Builder()
             .setFallbackMinPlaybackSpeed(1.0f)
