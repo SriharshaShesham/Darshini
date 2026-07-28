@@ -973,9 +973,6 @@ fun HomeScreen(
                                     preferredRestoreTarget = FocusRestoreTarget.CATEGORY.name
                                     viewModel.showCategoryOptions(category)
                                 },
-                                onJumpToSearch = {
-                                    runCatching { categorySearchFocusRequester.requestFocus() }.isSuccess
-                                },
                                 onJumpToContent = {
                                     if (isLocked) {
                                         pendingCategoryContentJumpCategoryId = null

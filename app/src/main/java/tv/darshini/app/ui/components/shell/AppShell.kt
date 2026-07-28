@@ -338,11 +338,6 @@ fun AppScreenScaffold(
 
                 Column(
                     modifier = Modifier
-                        .focusRequester(contentPaneFocusRequester)
-                        // Restore focus to the last-focused content child when focus re-enters
-                        // from the rail or the fallback sink, instead of the first focusable.
-                        .focusRestorer()
-                        .focusGroup()
                         .fillMaxSize()
                         .padding(
                             start = spacing.lg,
@@ -382,6 +377,7 @@ fun AppScreenScaffold(
                                     onValueChange = onSearchQueryChange,
                                     placeholder = searchPlaceholder ?: stringResource(R.string.search_title),
                                     triggerOnSubmitOnly = true,
+                                    lockLeftNavigation = true,
                                     modifier = Modifier.width(280.dp)
                                 )
                             }
@@ -396,16 +392,28 @@ fun AppScreenScaffold(
                             }
                         }
                     }
-                    if (header != null) {
-                        header()
-                        Spacer(modifier = Modifier.height(spacing.md))
-                    }
+                    // The focus group + restorer wraps ONLY the content, not the top-bar search.
+                    // So when focus re-enters from the rail or the fallback sink, it restores the
+                    // last-focused content item — never the search field (which caused the bounce).
                     Column(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(contentPadding)
+                            .focusRequester(contentPaneFocusRequester)
+                            .focusRestorer()
+                            .focusGroup()
+                            .weight(1f)
+                            .fillMaxWidth()
                     ) {
-                        content()
+                        if (header != null) {
+                            header()
+                            Spacer(modifier = Modifier.height(spacing.md))
+                        }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(contentPadding)
+                        ) {
+                            content()
+                        }
                     }
                 }
             }
