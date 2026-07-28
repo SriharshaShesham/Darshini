@@ -5,6 +5,24 @@ import tv.darshini.data.local.entity.*
 import tv.darshini.domain.model.ProviderType
 import kotlinx.coroutines.flow.Flow
 
+// Shared WHERE predicate: a playback_history row is kept only when its underlying catalog item
+// still exists. Movies match by local id; series/episodes match the series row (episodes hydrate
+// on-demand so they aren't required). Non-VOD content types pass through. Used by the
+// recently-watched queries so orphaned rows don't render empty, unplayable cards.
+private const val CONTENT_EXISTS = """
+    (
+        (content_type = 'MOVIE' AND EXISTS(
+            SELECT 1 FROM movies
+            WHERE movies.provider_id = playback_history.provider_id
+              AND movies.id = playback_history.content_id))
+        OR (content_type IN ('SERIES', 'SERIES_EPISODE') AND EXISTS(
+            SELECT 1 FROM series
+            WHERE series.provider_id = playback_history.provider_id
+              AND series.id = COALESCE(NULLIF(playback_history.series_id, 0), playback_history.content_id)))
+        OR content_type NOT IN ('MOVIE', 'SERIES', 'SERIES_EPISODE')
+    )
+"""
+
 data class RemoteIdMapping(
     @ColumnInfo(name = "id") val id: Long,
     @ColumnInfo(name = "remote_id") val remoteId: Long
@@ -2496,6 +2514,12 @@ interface SeriesDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(series: List<SeriesEntity>)
 
+    // Update-in-place (no DELETE). REPLACE would DELETE+INSERT the row, and the DELETE fires
+    // the episodes ON DELETE CASCADE, wiping episodes hydrated on-demand. Use this for the
+    // summary sync so re-indexing a series never destroys its episodes.
+    @Upsert
+    suspend fun upsertAll(series: List<SeriesEntity>)
+
     @Update
     suspend fun update(series: SeriesEntity)
 
@@ -2602,6 +2626,9 @@ interface EpisodeDao {
 
     @Query("SELECT * FROM episodes WHERE series_id = :seriesId ORDER BY season_number ASC, episode_number ASC")
     suspend fun getBySeriesSync(seriesId: Long): List<EpisodeBrowseEntity>
+
+    @Query("SELECT COUNT(*) FROM episodes WHERE series_id = :seriesId")
+    suspend fun countBySeries(seriesId: Long): Int
 
     @Query("SELECT * FROM episodes WHERE id = :id")
     suspend fun getById(id: Long): EpisodeEntity?
@@ -3216,13 +3243,36 @@ interface VirtualGroupDao {
 @Dao
 @RewriteQueriesToDropUnusedColumns
 interface PlaybackHistoryDao {
-    @Query("SELECT * FROM playback_history ORDER BY last_watched_at DESC LIMIT :limit")
+    // A playback_history row has no FK to movies/series, so a synced-away (or pruned) catalog
+    // item leaves an orphaned row that renders an empty, unplayable "continue watching" card.
+    // CONTENT_EXISTS keeps only rows whose movie/series still exists (series checked by row, not
+    // episodes — episodes hydrate on-demand, so an un-hydrated series must stay resumable).
+    // Non-VOD types (e.g. LIVE) are passed through unchanged.
+    @Query(
+        """
+        SELECT * FROM playback_history
+        WHERE $CONTENT_EXISTS
+        ORDER BY last_watched_at DESC LIMIT :limit
+        """
+    )
     fun getRecentlyWatched(limit: Int = 100): Flow<List<PlaybackHistoryLiteEntity>>
 
-    @Query("SELECT * FROM playback_history WHERE provider_id = :providerId ORDER BY last_watched_at DESC LIMIT :limit")
+    @Query(
+        """
+        SELECT * FROM playback_history
+        WHERE provider_id = :providerId AND $CONTENT_EXISTS
+        ORDER BY last_watched_at DESC LIMIT :limit
+        """
+    )
     fun getRecentlyWatchedByProvider(providerId: Long, limit: Int = 100): Flow<List<PlaybackHistoryLiteEntity>>
 
-    @Query("SELECT * FROM playback_history WHERE provider_id IN (:providerIds) ORDER BY last_watched_at DESC LIMIT :limit")
+    @Query(
+        """
+        SELECT * FROM playback_history
+        WHERE provider_id IN (:providerIds) AND $CONTENT_EXISTS
+        ORDER BY last_watched_at DESC LIMIT :limit
+        """
+    )
     fun getRecentlyWatchedByProviders(providerIds: Set<Long>, limit: Int = 100): Flow<List<PlaybackHistoryLiteEntity>>
 
     @Query("SELECT * FROM playback_history WHERE provider_id = :providerId ORDER BY last_watched_at DESC")
