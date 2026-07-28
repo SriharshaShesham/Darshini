@@ -313,6 +313,9 @@ class SyncManagerTest {
             org.mockito.kotlin.whenever(catalogSyncDao.countSeriesStages(any(), any())).thenReturn(0)
             org.mockito.kotlin.whenever(catalogSyncDao.getChannelStageCategorySummaries(any(), any())).thenReturn(emptyList())
             org.mockito.kotlin.whenever(xtreamContentIndexDao.pruneStaleLocalContentRows(any(), any())).thenReturn(0)
+            org.mockito.kotlin.whenever(xtreamContentIndexDao.markRowsStaleForProviderAndType(any(), any())).thenReturn(0)
+            org.mockito.kotlin.whenever(xtreamContentIndexDao.markRowsStaleForProviderAndTypeExcluding(any(), any(), any())).thenReturn(0)
+            org.mockito.kotlin.whenever(xtreamContentIndexDao.markVodAndSeriesRowsStaleForRebuildExcluding(any(), any())).thenReturn(0)
             // Default stubs for the streamed Stalker API methods. The tests in this file
             // generally don't stress live-stream streaming directly; without these defaults
             // the unstubbed mock returns null which crashes the `when (val streamResult)`

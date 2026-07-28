@@ -309,7 +309,9 @@ private fun JsonElement?.decodeEpisodeList(json: kotlinx.serialization.json.Json
 }
 
 private fun JsonElement.decodeEpisodeOrNull(json: kotlinx.serialization.json.Json): XtreamEpisode? =
-    runCatching { json.decodeFromJsonElement<XtreamEpisode>(this) }.getOrNull()
+    runCatching { json.decodeFromJsonElement<XtreamEpisode>(this) }
+        .onFailure { android.util.Log.e("XtreamSeriesInfo", "episode decode failed: ${it.message}") }
+        .getOrNull()
 
 private fun JsonElement?.decodeSeasonList(json: kotlinx.serialization.json.Json): List<XtreamSeason> {
     val element = this ?: return emptyList()
@@ -328,7 +330,9 @@ private fun JsonElement?.decodeSeasonList(json: kotlinx.serialization.json.Json)
 }
 
 private fun JsonElement.decodeSeasonOrNull(json: kotlinx.serialization.json.Json): XtreamSeason? =
-    runCatching { json.decodeFromJsonElement<XtreamSeason>(this) }.getOrNull()
+    runCatching { json.decodeFromJsonElement<XtreamSeason>(this) }
+        .onFailure { android.util.Log.e("XtreamSeriesInfo", "season decode failed: ${it.message}") }
+        .getOrNull()
 
 private fun List<XtreamEpisode>.groupBySeasonKey(): Map<String, List<XtreamEpisode>> =
     if (isEmpty()) {

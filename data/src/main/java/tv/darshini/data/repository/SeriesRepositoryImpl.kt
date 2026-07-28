@@ -83,7 +83,7 @@ class SeriesRepositoryImpl @Inject constructor(
         const val STALKER_PREVIEW_REQUIRED_COUNT_THRESHOLD = 24
         const val STALKER_PREVIEW_MAX_REMOTE_PAGES = 2
         const val DETAIL_REFRESH_TTL_MILLIS = 14L * 24L * 60L * 60L * 1000L
-        const val XTREAM_DETAIL_HYDRATION_TIMEOUT_MILLIS = 8_000L
+        const val XTREAM_DETAIL_HYDRATION_TIMEOUT_MILLIS = 25_000L
         const val CACHE_STATE_SUMMARY_ONLY = "SUMMARY_ONLY"
         const val CACHE_STATE_DETAIL_HYDRATED = "DETAIL_HYDRATED"
         val DETAIL_YEAR_REGEX = Regex("""(19|20)\d{2}""")
@@ -387,7 +387,13 @@ class SeriesRepositoryImpl @Inject constructor(
             return Result.success(attachSeriesPresentation(buildSeriesWithPersistedEpisodes(seriesEntity), knownPresentation))
         }
 
-        if (provider.type == ProviderType.XTREAM_CODES && seriesEntity.hasFreshXtreamDetails()) {
+        // Trust the "fresh details" short-circuit only if episodes actually survive. A series can
+        // be marked DETAIL_HYDRATED yet have zero episodes (e.g. wiped by a prior REPLACE cascade);
+        // in that case fall through and re-fetch instead of returning an empty, unplayable series.
+        if (provider.type == ProviderType.XTREAM_CODES &&
+            seriesEntity.hasFreshXtreamDetails() &&
+            episodeDao.countBySeries(seriesEntity.id) > 0
+        ) {
             return Result.success(attachSeriesPresentation(buildSeriesWithPersistedEpisodes(seriesEntity), knownPresentation))
         }
 
@@ -396,6 +402,7 @@ class SeriesRepositoryImpl @Inject constructor(
                 ProviderType.XTREAM_CODES -> withTimeoutOrNull(XTREAM_DETAIL_HYDRATION_TIMEOUT_MILLIS) {
                     getOrCreateXtreamProvider(providerId, provider).getSeriesInfo(seriesEntity.seriesId)
                 } ?: run {
+                    Log.e(TAG, "get_series_info seriesId=${seriesEntity.seriesId} timed out after ${XTREAM_DETAIL_HYDRATION_TIMEOUT_MILLIS}ms")
                     xtreamContentIndexDao.markDetailHydrationError(
                         providerId = providerId,
                         contentType = ContentType.SERIES.name,
@@ -438,6 +445,7 @@ class SeriesRepositoryImpl @Inject constructor(
             }
         } catch (e: Exception) {
             if (provider.type == ProviderType.XTREAM_CODES) {
+                Log.e(TAG, "get_series_info seriesId=${seriesEntity.seriesId} threw", e)
                 xtreamContentIndexDao.markDetailHydrationError(
                     providerId = providerId,
                     contentType = ContentType.SERIES.name,
@@ -452,6 +460,19 @@ class SeriesRepositoryImpl @Inject constructor(
         return when (remoteResult) {
             is Result.Success -> {
                 val remoteSeries = remoteResult.data
+                // A get_series_info that parses to zero episodes must NOT be cached as
+                // DETAIL_HYDRATED — otherwise hasFreshXtreamDetails() short-circuits every future
+                // open for the 14-day TTL and the series is stuck unplayable. Only mark fresh when
+                // episodes were actually obtained; empty stays SUMMARY_ONLY so the next open retries.
+                val remoteEpisodeCount = remoteSeries.seasons.sumOf { it.episodes.size }
+                val hydratedNow = remoteEpisodeCount > 0
+                if (!hydratedNow) {
+                    Log.e(
+                        TAG,
+                        "get_series_info seriesId=${seriesEntity.seriesId} returned 0 episodes " +
+                            "(seasons=${remoteSeries.seasons.size}); keeping SUMMARY_ONLY so it retries"
+                    )
+                }
 
                 val updatedSeries = seriesEntity.copy(
                     name = remoteSeries.name.ifBlank { seriesEntity.name },
@@ -470,11 +491,11 @@ class SeriesRepositoryImpl @Inject constructor(
                     episodeRunTime = remoteSeries.episodeRunTime ?: seriesEntity.episodeRunTime,
                     lastModified = if (remoteSeries.lastModified > 0) remoteSeries.lastModified else seriesEntity.lastModified,
                     providerSeriesId = remoteSeries.providerSeriesId?.takeIf { it.isNotBlank() } ?: seriesEntity.providerSeriesId,
-                    cacheState = CACHE_STATE_DETAIL_HYDRATED,
-                    detailHydratedAt = System.currentTimeMillis()
+                    cacheState = if (hydratedNow) CACHE_STATE_DETAIL_HYDRATED else seriesEntity.cacheState,
+                    detailHydratedAt = if (hydratedNow) System.currentTimeMillis() else seriesEntity.detailHydratedAt
                 )
                 seriesDao.update(updatedSeries)
-                if (provider.type == ProviderType.XTREAM_CODES) {
+                if (provider.type == ProviderType.XTREAM_CODES && hydratedNow) {
                     xtreamContentIndexDao.markDetailHydrated(
                         providerId = providerId,
                         contentType = ContentType.SERIES.name,
