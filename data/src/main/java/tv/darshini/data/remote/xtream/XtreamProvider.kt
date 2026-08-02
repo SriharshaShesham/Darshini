@@ -397,6 +397,11 @@ class XtreamProvider(
     override suspend fun getSeriesInfo(seriesId: Long): Result<Series> = try {
         val response = requestSeriesInfoWithCompatibilityFallback(seriesId)
         val info = response.info
+        android.util.Log.e(
+            "XtreamSeriesInfo",
+            "seriesId=$seriesId rawEpisodes=${response.episodes.values.sumOf { it.size }} " +
+                "seasons=${response.seasons.size} info=${info != null}"
+        )
         val adultCategoryIds = loadAdultCategoryIds(ContentType.SERIES)
         val baseSeries = info?.toDomain(
             adultCategoryIds = adultCategoryIds,
@@ -487,6 +492,7 @@ class XtreamProvider(
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
+        android.util.Log.e("XtreamSeriesInfo", "getSeriesInfo seriesId=$seriesId failed", e)
         Result.error(XtreamErrorFormatter.message("Failed to load series details", e), e)
     }
 

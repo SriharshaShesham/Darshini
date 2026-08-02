@@ -11,7 +11,6 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.extractor.DefaultExtractorsFactory
-import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.exoplayer.hls.HlsMediaSource
@@ -37,9 +36,12 @@ private val TS_SUBTITLE_FORMATS: List<Format> = listOf(
         .build()
 )
 
+// Live streams here are a continuous raw MPEG-TS feed (…/live/…/<id>.ts), NOT HLS segments.
+// TsExtractor.MODE_HLS requires an HLS-supplied timestamp adjuster and throws IllegalStateException
+// when driven by a ProgressiveMediaSource, breaking every live channel. Leave the extractor at its
+// default MODE_MULTI_PMT — the same config the generic branch below already uses successfully.
 internal fun liveMpegTsExtractorsFactory(): DefaultExtractorsFactory =
     DefaultExtractorsFactory()
-        .setTsExtractorMode(TsExtractor.MODE_HLS)
         .setTsExtractorFlags(
             DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
                 or DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES

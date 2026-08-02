@@ -9,7 +9,10 @@ internal fun shouldRecoverPositionAdvancingReadyStalls(resolvedStreamType: Resol
     !resolvedStreamType.isLiveForStallRecovery
 
 internal fun shouldRecoverFrameSilentReadyStalls(resolvedStreamType: ResolvedStreamType): Boolean =
-    resolvedStreamType.isLiveForStallRecovery
+    // Live was already covered; progressive VOD needs it too — a hardware decoder can freeze
+    // (video frames stop while the audio clock keeps advancing) and only escalating recovery
+    // (reprepare → software-decoder fallback) unfreezes it.
+    true
 
 internal fun shouldReconnectLiveStall(
     playbackState: PlaybackState,

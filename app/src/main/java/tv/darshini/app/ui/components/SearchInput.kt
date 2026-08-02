@@ -74,7 +74,8 @@ fun SearchInput(
     imeAction: ImeAction = ImeAction.Search,
     onSearch: () -> Unit = {},
     enabled: Boolean = true,
-    triggerOnSubmitOnly: Boolean = false
+    triggerOnSubmitOnly: Boolean = false,
+    lockLeftNavigation: Boolean = false
 ) {
     val isTelevisionDevice = rememberIsTelevisionDevice()
     var hasContainerFocus by remember { mutableStateOf(false) }
@@ -169,6 +170,11 @@ fun SearchInput(
             }
             .focusProperties {
                 canFocus = enabled
+                // In navigation mode the container is the left-most focusable in the top bar;
+                // without this, DPAD LEFT escapes to the nav rail (and re-entry bounces back here).
+                if (lockLeftNavigation) {
+                    left = FocusRequester.Cancel
+                }
             }
             .mouseClickable(enabled = enabled, focusRequester = focusRequester) {
                 activateInput()

@@ -121,7 +121,9 @@ class PlayerRetryPolicy(
             streamContext.isLive && dataType == C.DATA_TYPE_MANIFEST -> LIVE_TRANSIENT_RETRY_ATTEMPTS
             streamContext.isLive && dataType == C.DATA_TYPE_MEDIA -> LIVE_TRANSIENT_RETRY_ATTEMPTS
             dataType == C.DATA_TYPE_MANIFEST -> 3
-            dataType == C.DATA_TYPE_MEDIA -> if (streamContext.resolvedStreamType == ResolvedStreamType.PROGRESSIVE) 2 else 2
+            // Progressive VOD reads ride out transient blips in the load layer before
+            // surfacing as a full re-prepare (the visible "Retrying" recovery).
+            dataType == C.DATA_TYPE_MEDIA -> if (streamContext.resolvedStreamType == ResolvedStreamType.PROGRESSIVE) 5 else 2
             else -> 1
         }
     }

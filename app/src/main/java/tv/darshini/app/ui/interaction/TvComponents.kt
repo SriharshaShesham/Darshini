@@ -142,6 +142,13 @@ fun TvClickableSurface(
         )
     }
 
+    // Glass mode draws its own focus decoration (specular + edge strokes) via drawWithContent on
+    // the OUTER modifier, which sits outside the Surface's focus-scale layer. A focus zoom would
+    // scale the content (label) but not the hand-drawn border, so the two desync and the border
+    // ends up drawn over the left of the label. Keep the scale at 1x in glass — the gloss already
+    // signals focus. Non-glass uses the platform border (scaled with content), so its zoom is fine.
+    val resolvedScale = if (isGlass) ClickableSurfaceDefaults.scale(focusedScale = 1f) else scale
+
     Surface(
         onClick = onClick,
         onLongClick = onLongClick,
@@ -248,7 +255,7 @@ fun TvClickableSurface(
         shape = shape,
         colors = resolvedColors,
         border = resolvedBorder,
-        scale = scale,
+        scale = resolvedScale,
         glow = glow,
         interactionSource = interactionSource,
         content = content,

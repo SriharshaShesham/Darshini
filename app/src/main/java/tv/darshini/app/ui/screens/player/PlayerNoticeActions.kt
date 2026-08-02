@@ -1,5 +1,6 @@
 package tv.darshini.app.ui.screens.player
 
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import tv.darshini.app.ui.model.isArchivePlayable
 import tv.darshini.domain.model.ContentType
@@ -47,6 +48,17 @@ internal fun PlayerViewModel.showPlayerNotice(
     durationMs: Long = playerNoticeTimeoutMs,
     isRetryNotice: Boolean = false
 ) {
+    // Error/recovery notices are logged rather than shown. On a TV they cover the picture during
+    // the exact moment playback is already struggling, and the viewer can do nothing useful with
+    // them — recovery is automatic either way. Deliberate informational notices (sleep timer,
+    // catch-up availability, blocked notifications) carry no recovery type and still surface.
+    if (isRetryNotice || recoveryType != PlayerRecoveryType.UNKNOWN || actions.isNotEmpty()) {
+        Log.w(
+            "PlayerNotice",
+            "suppressed type=$recoveryType retry=$isRetryNotice actions=${actions.joinToString(",")} message=$message"
+        )
+        return
+    }
     playerNoticeHideJob?.cancel()
     _playerNotice.value = PlayerNoticeState(
         message = message,

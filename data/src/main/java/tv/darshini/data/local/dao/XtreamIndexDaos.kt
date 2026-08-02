@@ -103,6 +103,43 @@ abstract class XtreamContentIndexDao {
     )
     abstract suspend fun markRowsStaleForProviderAndType(providerId: Long, contentType: String): Int
 
+    // "Only sync visible" excludes hidden categories from re-indexing. If those rows were
+    // marked STALE_REMOTE like everything else, the post-sync prune would delete content the
+    // provider still has (and orphan its episodes + Continue Watching entries). These variants
+    // leave hidden-category rows untouched so the prune only removes genuinely-gone content.
+    // Callers must invoke them only when protectedCategoryIds is non-empty (Room would emit
+    // `NOT IN ()` for an empty set); the originals above cover the empty case.
+    @Query(
+        """
+        UPDATE xtream_content_index
+        SET stale_state = 'STALE_REMOTE',
+            error_state = NULL
+        WHERE provider_id = :providerId
+          AND content_type IN ('MOVIE', 'SERIES')
+          AND (category_id IS NULL OR category_id NOT IN (:protectedCategoryIds))
+        """
+    )
+    abstract suspend fun markVodAndSeriesRowsStaleForRebuildExcluding(
+        providerId: Long,
+        protectedCategoryIds: Set<Long>
+    ): Int
+
+    @Query(
+        """
+        UPDATE xtream_content_index
+        SET stale_state = 'STALE_REMOTE',
+            error_state = NULL
+        WHERE provider_id = :providerId
+          AND content_type = :contentType
+          AND (category_id IS NULL OR category_id NOT IN (:protectedCategoryIds))
+        """
+    )
+    abstract suspend fun markRowsStaleForProviderAndTypeExcluding(
+        providerId: Long,
+        contentType: String,
+        protectedCategoryIds: Set<Long>
+    ): Int
+
     @Query("DELETE FROM xtream_content_index WHERE provider_id = :providerId")
     abstract suspend fun deleteByProvider(providerId: Long): Int
 

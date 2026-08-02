@@ -311,22 +311,37 @@ fun SettingsScreen(
                         val isTv = context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
 
                         if (isTv) {
-                            val downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
-                            val targetFile = java.io.File(downloadDir, defaultFileName)
-                            var success = false
-                            try {
-                                downloadDir.mkdirs()
-                                if (targetFile.exists()) targetFile.delete()
-                                targetFile.createNewFile()
-                                viewModel.exportProvider(provider.id, android.net.Uri.fromFile(targetFile).toString()) {
-                                    viewModel.showUserMessage("Exported to Download folder: $defaultFileName")
-                                }
-                                success = true
-                            } catch (e: Exception) {
-                                // fallback to app private storage
+                            // Public Downloads must go through MediaStore on scoped storage (API 29+):
+                            // a raw file:// write is denied, and the entry is owned per-package, so the
+                            // debug build stops colliding with the file the release build created.
+                            val downloadUri = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                                runCatching {
+                                    val values = android.content.ContentValues().apply {
+                                        put(android.provider.MediaStore.Downloads.DISPLAY_NAME, defaultFileName)
+                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/json")
+                                        put(android.provider.MediaStore.Downloads.IS_PENDING, 1)
+                                    }
+                                    val collection = android.provider.MediaStore.Downloads
+                                        .getContentUri(android.provider.MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                                    context.contentResolver.insert(collection, values)
+                                }.getOrNull()
+                            } else {
+                                null
                             }
 
-                            if (!success) {
+                            if (downloadUri != null) {
+                                viewModel.exportProvider(provider.id, downloadUri.toString()) {
+                                    runCatching {
+                                        val done = android.content.ContentValues().apply {
+                                            put(android.provider.MediaStore.Downloads.IS_PENDING, 0)
+                                        }
+                                        context.contentResolver.update(downloadUri, done, null, null)
+                                    }
+                                    viewModel.showUserMessage("Exported to Download folder: $defaultFileName")
+                                }
+                            } else {
+                                // Pre-scoped-storage devices (or a MediaStore failure): write to the
+                                // app's own external files dir, which never needs a permission.
                                 val appDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS) ?: context.filesDir
                                 val backupsDir = java.io.File(appDir, "Backups").apply { mkdirs() }
                                 val fallbackFile = java.io.File(backupsDir, defaultFileName).apply {
