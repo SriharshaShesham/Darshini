@@ -79,8 +79,14 @@ class VideoStallDetector(
             if (!frameSilent) stalled = false
             return false
         }
-        if (lastFrameAtMs <= 0L) return false
-        val frameSilent = now - lastFrameAtMs >= stallThresholdMs
+        val frameSilent = if (lastFrameAtMs <= 0L) {
+            // No frame rendered since (re)start — e.g. a stall-recovery reprepare whose decoder
+            // stayed frozen and never produced a frame. Count silence from start (past the initial
+            // grace above) so the stall re-fires and recovery can escalate instead of hanging.
+            now - startedAtMs >= stallThresholdMs
+        } else {
+            now - lastFrameAtMs >= stallThresholdMs
+        }
         val requestedButNotAdvancing = playWhenReady && !isPlaying && frameSilent
         val frameSilentReadyRecovery = recoverFrameSilentReadyStalls && frameSilent
         if (!requestedButNotAdvancing && !frameSilentReadyRecovery && bufferedDurationMs <= 1_000L) {

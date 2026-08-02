@@ -870,7 +870,17 @@ class SyncManager @Inject constructor(
         try {
             withContext(Dispatchers.IO) {
                 progress(providerId, onProgress, "Marking existing index rows stale...")
-                val staleRows = xtreamContentIndexDao.markVodAndSeriesRowsStaleForRebuild(providerId)
+                // Don't mark hidden-category rows stale: they won't be re-indexed (only-visible
+                // sync), so the post-sync prune would otherwise delete them and orphan their
+                // episodes + Continue Watching entries. See markVodAndSeriesRowsStaleForRebuildExcluding.
+                val protectedCategoryIds =
+                    preferencesRepository.getHiddenCategoryIds(providerId, ContentType.MOVIE).first() +
+                        preferencesRepository.getHiddenCategoryIds(providerId, ContentType.SERIES).first()
+                val staleRows = if (protectedCategoryIds.isEmpty()) {
+                    xtreamContentIndexDao.markVodAndSeriesRowsStaleForRebuild(providerId)
+                } else {
+                    xtreamContentIndexDao.markVodAndSeriesRowsStaleForRebuildExcluding(providerId, protectedCategoryIds)
+                }
                 Log.i(TAG, "Marked $staleRows Xtream VOD/series index rows STALE_REMOTE for provider $providerId rebuild.")
 
                 val useTextClassification = preferencesRepository.useXtreamTextClassification.first()
@@ -3598,7 +3608,9 @@ class SyncManager @Inject constructor(
             mergeSeriesSummary(existing, summary)
         }
         transactionRunner.inTransaction {
-            seriesDao.insertAll(merged)
+            // upsertAll (update-in-place), NOT insertAll (REPLACE): REPLACE deletes the existing
+            // series row and the episodes ON DELETE CASCADE wipes on-demand-hydrated episodes.
+            seriesDao.upsertAll(merged)
             val persistedBySeriesId = loadSeriesByIds(providerId, merged.map { it.seriesId })
             xtreamContentIndexDao.upsertAll(
                 merged.map { item ->
@@ -3994,7 +4006,14 @@ class SyncManager @Inject constructor(
             ContentType.SERIES -> seriesCategoryHydrationDao.deleteByProvider(providerId)
             else -> Unit
         }
-        xtreamContentIndexDao.markRowsStaleForProviderAndType(providerId, contentType.name)
+        // Hidden categories are filtered out of re-indexing, so leave their rows non-stale to
+        // keep the prune from deleting content that only-visible sync deliberately skipped.
+        val protectedCategoryIds = preferencesRepository.getHiddenCategoryIds(providerId, contentType).first()
+        if (protectedCategoryIds.isEmpty()) {
+            xtreamContentIndexDao.markRowsStaleForProviderAndType(providerId, contentType.name)
+        } else {
+            xtreamContentIndexDao.markRowsStaleForProviderAndTypeExcluding(providerId, contentType.name, protectedCategoryIds)
+        }
         upsertXtreamIndexJob(
             providerId = providerId,
             section = contentType.name,

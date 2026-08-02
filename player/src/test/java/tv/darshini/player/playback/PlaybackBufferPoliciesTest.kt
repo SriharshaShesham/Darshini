@@ -245,11 +245,25 @@ class PlaybackBufferPoliciesTest {
         val policy = PlaybackBufferPolicies.forPlayback(isLive = false, compatibilityMode = false)
 
         assertThat(policy.label).isEqualTo("stable-vod")
-        assertThat(policy.minBufferMs).isEqualTo(90_000)
-        assertThat(policy.maxBufferMs).isEqualTo(240_000)
-        assertThat(policy.playbackBufferMs).isEqualTo(8_000)
-        assertThat(policy.rebufferMs).isEqualTo(18_000)
-        assertThat(policy.targetBufferBytes).isEqualTo(-1)
-        assertThat(policy.prioritizeTimeOverSizeThresholds).isTrue()
+        assertThat(policy.minBufferMs).isEqualTo(180_000)
+        assertThat(policy.maxBufferMs).isEqualTo(420_000)
+        assertThat(policy.playbackBufferMs).isEqualTo(20_000)
+        assertThat(policy.rebufferMs).isEqualTo(30_000)
+        assertThat(policy.targetBufferBytes).isEqualTo(PlaybackBufferPolicies.vodTargetBufferBytes())
+        // Must stay false: with true, DefaultLoadControl ignores the byte ceiling until the ms
+        // target is met, and a high-bitrate movie exhausts the heap (192MB TV -> GC thrash).
+        assertThat(policy.prioritizeTimeOverSizeThresholds).isFalse()
+    }
+
+    @Test
+    fun `vod byte budget scales with heap and stays clamped`() {
+        // 192MB heap (the Hisense TV) -> 48MB, a quarter of the heap.
+        assertThat(PlaybackBufferPolicies.vodTargetBufferBytes(192L * 1024 * 1024))
+            .isEqualTo(48 * 1024 * 1024)
+        // Tiny heap clamps up to the floor, huge heap clamps down to the ceiling.
+        assertThat(PlaybackBufferPolicies.vodTargetBufferBytes(32L * 1024 * 1024))
+            .isEqualTo(16 * 1024 * 1024)
+        assertThat(PlaybackBufferPolicies.vodTargetBufferBytes(2L * 1024 * 1024 * 1024))
+            .isEqualTo(96 * 1024 * 1024)
     }
 }

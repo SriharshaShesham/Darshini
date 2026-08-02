@@ -272,7 +272,6 @@ internal fun CategoryItem(
     focusRequester: FocusRequester,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
-    onJumpToSearch: () -> Boolean,
     onJumpToContent: () -> Boolean,
     onFocused: () -> Unit,
     onFocusChanged: (Boolean) -> Unit = {}
@@ -292,12 +291,13 @@ internal fun CategoryItem(
                 if (it.isFocused) onFocused()
             }
             .onPreviewKeyEvent { event ->
-                if (event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
-                    when (event.nativeKeyEvent.keyCode) {
-                        android.view.KeyEvent.KEYCODE_DPAD_LEFT -> onJumpToSearch()
-                        android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> onJumpToContent()
-                        else -> false
-                    }
+                // LEFT is intentionally not handled here: it falls through to spatial navigation so
+                // focus moves to the app nav rail, consistent with the rest of the app (the category
+                // search is reachable via UP). RIGHT selects the category and jumps into content.
+                if (event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                    event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT
+                ) {
+                    onJumpToContent()
                 } else false
             },
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),

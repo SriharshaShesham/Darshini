@@ -338,11 +338,6 @@ fun AppScreenScaffold(
 
                 Column(
                     modifier = Modifier
-                        .focusRequester(contentPaneFocusRequester)
-                        // Restore focus to the last-focused content child when focus re-enters
-                        // from the rail or the fallback sink, instead of the first focusable.
-                        .focusRestorer()
-                        .focusGroup()
                         .fillMaxSize()
                         .padding(
                             start = spacing.lg,
@@ -382,6 +377,7 @@ fun AppScreenScaffold(
                                     onValueChange = onSearchQueryChange,
                                     placeholder = searchPlaceholder ?: stringResource(R.string.search_title),
                                     triggerOnSubmitOnly = true,
+                                    lockLeftNavigation = true,
                                     modifier = Modifier.width(280.dp)
                                 )
                             }
@@ -396,16 +392,28 @@ fun AppScreenScaffold(
                             }
                         }
                     }
-                    if (header != null) {
-                        header()
-                        Spacer(modifier = Modifier.height(spacing.md))
-                    }
+                    // The focus group + restorer wraps ONLY the content, not the top-bar search.
+                    // So when focus re-enters from the rail or the fallback sink, it restores the
+                    // last-focused content item — never the search field (which caused the bounce).
                     Column(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(contentPadding)
+                            .focusRequester(contentPaneFocusRequester)
+                            .focusRestorer()
+                            .focusGroup()
+                            .weight(1f)
+                            .fillMaxWidth()
                     ) {
-                        content()
+                        if (header != null) {
+                            header()
+                            Spacer(modifier = Modifier.height(spacing.md))
+                        }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(contentPadding)
+                        ) {
+                            content()
+                        }
                     }
                 }
             }
@@ -459,6 +467,65 @@ fun AppScreenScaffold(
                     content()
                 }
             }
+        }
+    }
+}
+
+/**
+ * Wraps a full-screen detail screen (movie/series) with the collapsed navigation rail so detail
+ * pages stay consistent with the rest of the app. Mirrors the rail chrome from [AppScreenScaffold]
+ * (focus sink + rail + content focus group) but without the screen header — the detail screen
+ * manages its own hero/content. On non-side-nav layouts (phones) the content renders unchanged.
+ */
+@Composable
+fun DetailScreenRailScaffold(
+    currentRoute: String,
+    onNavigate: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    if (!LocalUseSideNavigation.current) {
+        content()
+        return
+    }
+    var railExpanded by rememberSaveable { mutableStateOf(false) }
+    val railWidth by animateDpAsState(
+        targetValue = if (railExpanded) 240.dp else 72.dp,
+        label = "detailRailWidth"
+    )
+    val contentPaneFocusRequester = remember { FocusRequester() }
+    var fallbackFocusBounce by remember { mutableIntStateOf(0) }
+    LaunchedEffect(fallbackFocusBounce) {
+        if (fallbackFocusBounce > 0) {
+            contentPaneFocusRequester.requestFocusSafely(tag = "FocusDebug", target = "Detail content pane")
+        }
+    }
+    Row(modifier = modifier.fillMaxSize()) {
+        // Claims the default focus grant so it never lands on the rail hamburger (see AppScreenScaffold).
+        Box(
+            modifier = Modifier
+                .size(1.dp)
+                .onFocusChanged { if (it.isFocused) fallbackFocusBounce++ }
+                .focusTarget()
+        )
+        DestinationRail(
+            currentRoute = currentRoute,
+            onNavigate = onNavigate,
+            isExpanded = railExpanded,
+            onToggleExpanded = { railExpanded = !railExpanded },
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(railWidth)
+        )
+        Box(
+            modifier = Modifier
+                .focusRequester(contentPaneFocusRequester)
+                .focusRestorer()
+                .focusGroup()
+                .weight(1f)
+                .fillMaxSize()
+        ) {
+            content()
         }
     }
 }

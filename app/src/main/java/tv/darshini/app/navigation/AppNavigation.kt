@@ -27,6 +27,7 @@ import tv.darshini.domain.repository.ChannelRepository
 import tv.darshini.app.ui.screens.dashboard.DashboardScreen
 import tv.darshini.app.ui.screens.multiview.MultiViewScreen
 import tv.darshini.app.ui.screens.home.HomeScreen
+import tv.darshini.app.ui.components.shell.DetailScreenRailScaffold
 import tv.darshini.app.ui.screens.movies.MoviesScreen
 import tv.darshini.app.ui.screens.player.PlayerScreen
 import tv.darshini.app.ui.screens.plugins.PluginsScreen
@@ -902,6 +903,10 @@ fun AppNavigation(mainActivity: MainActivity) {
             val movieId = backStackEntry.arguments?.getLong("movieId") ?: -1L
             val moviePlayMode = mainActivity.preferencesRepository.playerExternalPlaybackMode
                 .collectAsStateWithLifecycle(ExternalPlaybackMode.INTERNAL_PLAYER).value
+            DetailScreenRailScaffold(
+                currentRoute = Routes.MOVIES,
+                onNavigate = { route -> tabNavigate(route) }
+            ) {
             tv.darshini.app.ui.screens.movies.MovieDetailScreen(
                 onPlay = { movie ->
                     Log.d("AppNavigation", "MovieDetail onPlay: mode = $moviePlayMode, movie = ${movie.name}")
@@ -944,6 +949,7 @@ fun AppNavigation(mainActivity: MainActivity) {
                     }
                 }
             )
+            }
         }
 
         composable(
@@ -959,6 +965,10 @@ fun AppNavigation(mainActivity: MainActivity) {
                 }
             val returnRoute = backStackEntry.arguments?.getString("returnRoute").orEmpty().takeIf { it.isNotBlank() }
             val seriesId = backStackEntry.arguments?.getLong("seriesId") ?: -1L
+            DetailScreenRailScaffold(
+                currentRoute = Routes.SERIES,
+                onNavigate = { route -> tabNavigate(route) }
+            ) {
             tv.darshini.app.ui.screens.series.SeriesDetailScreen(
                 onEpisodeClick = { episode ->
                     // Episodes use xtream:// URLs that need SeriesRepository resolution
@@ -994,6 +1004,7 @@ fun AppNavigation(mainActivity: MainActivity) {
                     }
                 }
             )
+            }
         }
 
         composable(Routes.MULTI_VIEW) {

@@ -168,6 +168,8 @@ fun PlayerControlsOverlay(
     onOpenIdleStandbyTimer: () -> Unit = {},
     onOpenAudioVideoSync: () -> Unit = {},
     audioVideoSyncEnabled: Boolean = false,
+    decoderModeLabel: String = "",
+    onCycleDecoderMode: () -> Unit = {},
     showEpisodesAction: Boolean = false,
     onOpenEpisodes: () -> Unit = {},
     onOpenSplitScreen: () -> Unit,
@@ -265,6 +267,8 @@ fun PlayerControlsOverlay(
                 onOpenIdleStandbyTimer = onOpenIdleStandbyTimer,
                 onOpenAudioVideoSync = onOpenAudioVideoSync,
                 audioVideoSyncEnabled = audioVideoSyncEnabled,
+                decoderModeLabel = decoderModeLabel,
+                onCycleDecoderMode = onCycleDecoderMode,
                 showEpisodesAction = showEpisodesAction,
                 onOpenEpisodes = onOpenEpisodes,
                 onOpenSplitScreen = onOpenSplitScreen,
@@ -603,6 +607,8 @@ private fun PlayerBottomBar(
     onOpenIdleStandbyTimer: () -> Unit,
     onOpenAudioVideoSync: () -> Unit,
     audioVideoSyncEnabled: Boolean,
+    decoderModeLabel: String = "",
+    onCycleDecoderMode: () -> Unit = {},
     showEpisodesAction: Boolean,
     onOpenEpisodes: () -> Unit,
     onOpenSplitScreen: () -> Unit,
@@ -670,6 +676,8 @@ private fun PlayerBottomBar(
                 onOpenIdleStandbyTimer = onOpenIdleStandbyTimer,
                 onOpenAudioVideoSync = onOpenAudioVideoSync,
                 audioVideoSyncEnabled = audioVideoSyncEnabled,
+                decoderModeLabel = decoderModeLabel,
+                onCycleDecoderMode = onCycleDecoderMode,
                 showEpisodesAction = showEpisodesAction,
                 onOpenEpisodes = onOpenEpisodes,
                 onEnterPictureInPicture = onEnterPictureInPicture,
@@ -1056,6 +1064,8 @@ private fun PlayerVodInfo(
     onOpenStopPlaybackTimer: () -> Unit,
     onOpenIdleStandbyTimer: () -> Unit,
     onOpenAudioVideoSync: () -> Unit,
+    decoderModeLabel: String = "",
+    onCycleDecoderMode: () -> Unit = {},
     showEpisodesAction: Boolean,
     onOpenEpisodes: () -> Unit,
     onEnterPictureInPicture: () -> Unit,
@@ -1379,6 +1389,13 @@ private fun PlayerVodInfo(
                         PlayerQuickSettingsButton(
                             text = stringResource(R.string.player_av_sync_short),
                             onClick = { showSettingsMenu = false; onOpenAudioVideoSync() }
+                        )
+                    }
+                    if (decoderModeLabel.isNotEmpty()) {
+                        // Cycles Auto → HW → SW → Compat; menu stays open so the label updates in place.
+                        PlayerQuickSettingsButton(
+                            text = stringResource(R.string.player_decoder_mode_value, decoderModeLabel),
+                            onClick = onCycleDecoderMode
                         )
                     }
                     PlayerQuickSettingsButton(
