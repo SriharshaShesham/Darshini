@@ -35,9 +35,12 @@ class PlaybackCodecSelectorTest {
     }
 
     @Test
-    fun `managed codec selector is reserved for explicit decoder modes`() {
+    fun `managed codec selector follows the effective policy, not who chose it`() {
         assertThat(shouldUseManagedCodecSelector(DecoderMode.AUTO, ActiveDecoderPolicy.AUTO)).isFalse()
-        assertThat(shouldUseManagedCodecSelector(DecoderMode.AUTO, ActiveDecoderPolicy.SOFTWARE_PREFERRED)).isFalse()
+        // Stall recovery escalates to software while requestedMode stays AUTO. The selector MUST
+        // install here, or the "software fallback" re-picks the hardware decoder that just froze.
+        assertThat(shouldUseManagedCodecSelector(DecoderMode.AUTO, ActiveDecoderPolicy.SOFTWARE_PREFERRED)).isTrue()
+        assertThat(shouldUseManagedCodecSelector(DecoderMode.AUTO, ActiveDecoderPolicy.COMPATIBILITY)).isTrue()
         assertThat(shouldUseManagedCodecSelector(DecoderMode.HARDWARE, ActiveDecoderPolicy.HARDWARE_PREFERRED)).isTrue()
         assertThat(shouldUseManagedCodecSelector(DecoderMode.SOFTWARE, ActiveDecoderPolicy.SOFTWARE_PREFERRED)).isTrue()
         assertThat(shouldUseManagedCodecSelector(DecoderMode.COMPATIBILITY, ActiveDecoderPolicy.COMPATIBILITY)).isTrue()

@@ -14,10 +14,16 @@ enum class ActiveDecoderPolicy {
     COMPATIBILITY
 }
 
+/**
+ * Keyed off the effective [decoderPolicy], NOT off whether the user picked it. Requiring a
+ * non-AUTO [requestedMode] made stall recovery's software fallback a no-op for video: recovery
+ * leaves requestedMode == AUTO, so the selector was skipped and Media3's default re-picked the
+ * same hardware decoder that had just frozen (only audio moved to software).
+ */
 internal fun shouldUseManagedCodecSelector(
-    requestedMode: DecoderMode,
+    @Suppress("UNUSED_PARAMETER") requestedMode: DecoderMode,
     decoderPolicy: ActiveDecoderPolicy
-): Boolean = requestedMode != DecoderMode.AUTO && decoderPolicy != ActiveDecoderPolicy.AUTO
+): Boolean = decoderPolicy != ActiveDecoderPolicy.AUTO
 
 internal data class PlaybackRendererPlan(
     val useAudioVideoSyncSink: Boolean,

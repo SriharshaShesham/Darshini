@@ -141,9 +141,6 @@ internal fun PlayerViewModel.cleanupAfterCleared(mainPlayerEngine: PlayerEngine)
     aspectRatioJob?.cancel()
     recentChannelsJob?.cancel()
     lastVisitedCategoryJob?.cancel()
-    thumbnailPreloadJob?.cancel()
-    inFlightThumbnailPreloadKey = null
-    lastCompletedThumbnailPreloadKey = null
     seekThumbnailProvider.clearCache()
 
     val activeEngine = playerEngine

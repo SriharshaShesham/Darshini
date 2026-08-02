@@ -39,13 +39,16 @@ jobs:
       - name: Build Signed Release APK
         run: |
           ./gradlew assembleRelease
-          cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/darshini.v1.0.0.apk
+          # Name the asset after the tag. Was hardcoded to v1.0.0, so every release
+          # published an APK claiming to be 1.0.0 regardless of what was built.
+          VERSION="${GITHUB_REF_NAME:-dev}"
+          cp app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/darshini.${VERSION}.apk"
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            app/build/outputs/apk/release/darshini.v1.0.0.apk
+            app/build/outputs/apk/release/darshini.${{ github.ref_name }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

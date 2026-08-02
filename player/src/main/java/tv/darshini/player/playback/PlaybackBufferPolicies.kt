@@ -35,11 +35,13 @@ internal object PlaybackBufferPolicies {
     // VOD on "low memory" devices (memoryClass <= 256 flags most Android TV boxes). Throttled IPTV
     // VOD bursts then rate-limits below the stream bitrate, so a 1s startup buffer stalls within
     // seconds. Pre-buffer a large cushion to capture the burst and ride through the throttle.
-    private const val LOW_MEMORY_VOD_MIN_BUFFER_MS = 60_000
-    private const val LOW_MEMORY_VOD_MAX_BUFFER_MS = 120_000
-    private const val LOW_MEMORY_VOD_PLAYBACK_BUFFER_MS = 10_000
-    private const val LOW_MEMORY_VOD_REBUFFER_MS = 15_000
-    private const val LOW_MEMORY_VOD_TARGET_BUFFER_BYTES = 48 * 1024 * 1024
+    // The ms targets below are an UPPER bound only — VOD sets prioritizeTimeOverSizeThresholds=false
+    // so vodTargetBufferBytes() is what actually stops the loader. Buffer depth is therefore
+    // "as much as fits in the byte budget", which is bounded no matter how fat the stream is.
+    private const val LOW_MEMORY_VOD_MIN_BUFFER_MS = 120_000
+    private const val LOW_MEMORY_VOD_MAX_BUFFER_MS = 300_000
+    private const val LOW_MEMORY_VOD_PLAYBACK_BUFFER_MS = 30_000
+    private const val LOW_MEMORY_VOD_REBUFFER_MS = 30_000
     private const val LOW_MEMORY_PLAYBACK_BUFFER_MS = 1_000
     private const val LOW_MEMORY_REBUFFER_MS = 3_000
 
@@ -47,12 +49,14 @@ internal object PlaybackBufferPolicies {
     private const val LIVE_MAX_BUFFER_MS = 30_000
     private const val COMPAT_LIVE_MIN_BUFFER_MS = 15_000
     private const val COMPAT_LIVE_MAX_BUFFER_MS = 45_000
-    private const val VOD_MIN_BUFFER_MS = 90_000
-    private const val VOD_MAX_BUFFER_MS = 240_000
+    // Aggressive VOD cushion on normal-memory devices (see lowmem note above): buffer a large
+    // stretch up front to ride the provider throttle with fewer, longer stalls.
+    private const val VOD_MIN_BUFFER_MS = 180_000
+    private const val VOD_MAX_BUFFER_MS = 420_000
     private const val PLAYBACK_BUFFER_MS = 1_500
     private const val REBUFFER_MS = 5_000
-    private const val VOD_PLAYBACK_BUFFER_MS = 8_000
-    private const val VOD_REBUFFER_MS = 18_000
+    private const val VOD_PLAYBACK_BUFFER_MS = 20_000
+    private const val VOD_REBUFFER_MS = 30_000
     private const val VOD_BACK_BUFFER_MS = 30_000
     private const val MEDIUM_LIVE_MIN_BUFFER_MS = 15_000
     private const val MEDIUM_LIVE_MAX_BUFFER_MS = 45_000
@@ -65,6 +69,22 @@ internal object PlaybackBufferPolicies {
     private const val UHD_MIN_WIDTH = 3_840
     private const val UHD_MIN_HEIGHT = 2_160
     private const val HIGH_BITRATE_THRESHOLD_BPS = 20_000_000
+
+    private const val VOD_TARGET_BUFFER_HEAP_DIVISOR = 4
+    private const val VOD_TARGET_BUFFER_MIN_BYTES = 16L * 1024 * 1024
+    private const val VOD_TARGET_BUFFER_MAX_BYTES = 96L * 1024 * 1024
+
+    /**
+     * VOD sample buffers are `byte[]` on the Java heap, so the byte budget must scale with the heap
+     * the process actually got — not a fixed constant. A 192MB-heap TV buffering to a 120s *time*
+     * target filled ~150MB and thrashed GC until playback ran in slow motion; a quarter of the heap
+     * leaves room for Compose, the image cache, and catalog data.
+     */
+    fun vodTargetBufferBytes(
+        maxHeapBytes: Long = Runtime.getRuntime().maxMemory()
+    ): Int = (maxHeapBytes / VOD_TARGET_BUFFER_HEAP_DIVISOR)
+        .coerceIn(VOD_TARGET_BUFFER_MIN_BYTES, VOD_TARGET_BUFFER_MAX_BYTES)
+        .toInt()
 
     fun forPlayback(
         isLive: Boolean,
@@ -185,10 +205,11 @@ internal object PlaybackBufferPolicies {
                 maxBufferMs = LOW_MEMORY_VOD_MAX_BUFFER_MS,
                 playbackBufferMs = LOW_MEMORY_VOD_PLAYBACK_BUFFER_MS,
                 rebufferMs = LOW_MEMORY_VOD_REBUFFER_MS,
-                // Explicit byte ceiling so a high-bitrate VOD actually buffers to the ms target
-                // (captures the server's initial burst) instead of draining early on the default cap.
-                targetBufferBytes = LOW_MEMORY_VOD_TARGET_BUFFER_BYTES,
-                prioritizeTimeOverSizeThresholds = true
+                targetBufferBytes = vodTargetBufferBytes(),
+                // false = the byte ceiling binds. With true, DefaultLoadControl ignores it until the
+                // ms target is met and a fat stream exhausts the heap. It also lets playback start
+                // once the budget is full rather than waiting for playbackBufferMs of duration.
+                prioritizeTimeOverSizeThresholds = false
             )
         resolvedStreamType == ResolvedStreamType.MPEG_TS_LIVE ->
             PlaybackBufferPolicy(
@@ -227,10 +248,9 @@ internal object PlaybackBufferPolicies {
                 maxBufferMs = VOD_MAX_BUFFER_MS,
                 playbackBufferMs = VOD_PLAYBACK_BUFFER_MS,
                 rebufferMs = VOD_REBUFFER_MS,
-                // Explicit byte ceiling so high-bitrate remuxes actually buffer to the ms target
-                // instead of draining early on the default per-format byte cap.
-                targetBufferBytes = LARGE_LIVE_TARGET_BUFFER_BYTES,
-                prioritizeTimeOverSizeThresholds = true,
+                targetBufferBytes = vodTargetBufferBytes(),
+                // See lowmem-vod: byte ceiling must bind or a high-bitrate remux exhausts the heap.
+                prioritizeTimeOverSizeThresholds = false,
                 backBufferMs = VOD_BACK_BUFFER_MS
             )
     }
