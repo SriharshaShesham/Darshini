@@ -82,6 +82,7 @@ import tv.darshini.app.MainActivity
 import tv.darshini.app.cast.CastConnectionState
 import tv.darshini.app.ui.components.PlayerRenderView
 import tv.darshini.app.ui.design.requestFocusSafely
+import tv.darshini.app.ui.screens.settings.formatDecoderModeLabel
 import tv.darshini.app.ui.notifications.rememberNotificationPermissionGate
 import tv.darshini.app.ui.screens.player.overlay.ChannelInfoOverlay
 import tv.darshini.app.ui.screens.player.overlay.ChannelVariantSelectionDialog
@@ -338,7 +339,10 @@ fun PlayerScreen(
     // Consolidated focus management for all overlays
     val liveOverlayVisible = contentType == "LIVE" && (showChannelListOverlay || showCategoryListOverlay || showEpgOverlay || showChannelInfoOverlay)
     val nextEpisodeCountdownVisible = !isInPictureInPictureMode && autoPlayCountdown != null
-    val anyOverlayVisible = liveOverlayVisible || nextEpisodeCountdownVisible || showTrackSelection != null || showVariantSelection || showSpeedSelection || showAudioVideoOffsetDialog || showStopPlaybackTimerDialog || showIdleStandbyTimerDialog || showProgramHistory || showSplitDialog || showEpisodePicker || showDiagnostics
+    // Single source of truth for "something is on top of the player". Every key/tap/focus guard
+    // reads this — anything drawn over the player MUST be listed here or it will silently keep
+    // taking the player's D-pad handling (e.g. DPAD_LEFT seeking instead of moving focus).
+    val anyOverlayVisible = liveOverlayVisible || nextEpisodeCountdownVisible || showTrackSelection != null || showVariantSelection || showSpeedSelection || showAudioVideoOffsetDialog || showStopPlaybackTimerDialog || showIdleStandbyTimerDialog || showProgramHistory || showSplitDialog || showEpisodePicker || showDiagnostics || resumePrompt.show
 
     LaunchedEffect(contentType, showCategoryListOverlay, showChannelListOverlay, showEpgOverlay, showChannelInfoOverlay) {
         if (contentType == "LIVE" && (showCategoryListOverlay || showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay)) {
@@ -607,10 +611,12 @@ fun PlayerScreen(
                                 "idleTimer=$showIdleStandbyTimerDialog episodePicker=$showEpisodePicker"
                         )
                     }
+                    // Guard on anyOverlayVisible rather than re-listing dialogs: an overlay that is
+                    // open owns LEFT/RIGHT for focus movement, and a per-dialog list here drifts
+                    // out of sync with the real set (that is how the resume prompt ended up
+                    // rewinding instead of moving focus to "Start Over").
                     if ((kc == KeyEvent.KEYCODE_DPAD_LEFT || kc == KeyEvent.KEYCODE_DPAD_RIGHT) &&
-                        showTrackSelection == null && !showSpeedSelection &&
-                        !showAudioVideoOffsetDialog && !showStopPlaybackTimerDialog &&
-                        !showIdleStandbyTimerDialog && !showEpisodePicker &&
+                        !anyOverlayVisible &&
                         !showControls
                     ) {
                         Log.d("SeekDbg", "GLOBAL seek FIRES kc=$kc action=${event.nativeKeyEvent.action}")
@@ -694,6 +700,21 @@ fun PlayerScreen(
                                 true
                             }
                             else -> true
+                        }
+                    }
+                    // The resume prompt draws inside the player rather than in its own window, so
+                    // the player's D-pad handling below would eat LEFT/RIGHT (seek) before focus
+                    // could move to "Start Over". Hand the navigation keys to the prompt; BACK and
+                    // the media keys keep their normal player behaviour.
+                    if (resumePrompt.show) {
+                        when (event.nativeKeyEvent.keyCode) {
+                            KeyEvent.KEYCODE_DPAD_LEFT,
+                            KeyEvent.KEYCODE_DPAD_RIGHT,
+                            KeyEvent.KEYCODE_DPAD_UP,
+                            KeyEvent.KEYCODE_DPAD_DOWN,
+                            KeyEvent.KEYCODE_DPAD_CENTER,
+                            KeyEvent.KEYCODE_ENTER,
+                            KeyEvent.KEYCODE_NUMPAD_ENTER -> return@onKeyEvent false
                         }
                     }
                     if (showTrackSelection != null || showVariantSelection || showSpeedSelection || showAudioVideoOffsetDialog || showStopPlaybackTimerDialog || showIdleStandbyTimerDialog) {
@@ -1110,6 +1131,8 @@ fun PlayerScreen(
             onOpenIdleStandbyTimer = { showIdleStandbyTimerDialog = true },
             onOpenAudioVideoSync = { showAudioVideoOffsetDialog = true },
             audioVideoSyncEnabled = audioVideoSyncEnabled,
+            decoderModeLabel = formatDecoderModeLabel(playerDiagnostics.decoderMode, LocalContext.current),
+            onCycleDecoderMode = viewModel::cycleDecoderMode,
             showEpisodesAction = canOpenEpisodePicker,
             onOpenEpisodes = { showEpisodePicker = true },
             onOpenSplitScreen = { showSplitDialog = true },
@@ -1525,6 +1548,8 @@ private fun PlayerControlsOverlayHost(
     onOpenIdleStandbyTimer: () -> Unit,
     onOpenAudioVideoSync: () -> Unit,
     audioVideoSyncEnabled: Boolean,
+    decoderModeLabel: String = "",
+    onCycleDecoderMode: () -> Unit = {},
     showEpisodesAction: Boolean,
     onOpenEpisodes: () -> Unit,
     onOpenSplitScreen: () -> Unit,
@@ -1595,6 +1620,8 @@ private fun PlayerControlsOverlayHost(
         onOpenIdleStandbyTimer = onOpenIdleStandbyTimer,
         onOpenAudioVideoSync = onOpenAudioVideoSync,
         audioVideoSyncEnabled = audioVideoSyncEnabled,
+        decoderModeLabel = decoderModeLabel,
+        onCycleDecoderMode = onCycleDecoderMode,
         showEpisodesAction = showEpisodesAction,
         onOpenEpisodes = onOpenEpisodes,
         onOpenSplitScreen = onOpenSplitScreen,

@@ -344,9 +344,6 @@ class PlayerViewModel @Inject constructor(
     internal var lastVisitedCategoryJob: Job? = null
     internal var controlsHideJob: Job? = null
     internal var seekPreviewJob: Job? = null
-    internal var thumbnailPreloadJob: Job? = null
-    internal var inFlightThumbnailPreloadKey: String? = null
-    internal var lastCompletedThumbnailPreloadKey: String? = null
     private var lowBandwidthMonitorJob: Job? = null
     internal var progressTrackingJob: Job? = null
     internal var tokenRenewalJob: Job? = null
@@ -507,7 +504,6 @@ class PlayerViewModel @Inject constructor(
                         }
                     } else {
                         recordMovieVariantSuccessObservation()
-                        startThumbnailPreload()
                     }
                 }
             }
@@ -1034,7 +1030,6 @@ class PlayerViewModel @Inject constructor(
 
     internal fun beginPlaybackSession(): Long {
         recoveryJob?.cancel()
-        thumbnailPreloadJob?.cancel()
         stopLiveTranslationSession()
         hasRetriedXtreamAuthRefresh = false
         lastRecordedVariantObservationSignature = null

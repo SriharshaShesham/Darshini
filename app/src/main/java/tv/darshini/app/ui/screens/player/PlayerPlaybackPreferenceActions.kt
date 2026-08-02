@@ -2,6 +2,7 @@ package tv.darshini.app.ui.screens.player
 
 import androidx.lifecycle.viewModelScope
 import tv.darshini.domain.model.ContentType
+import tv.darshini.domain.model.DecoderMode
 import tv.darshini.domain.model.LiveChannelObservedQuality
 import tv.darshini.domain.model.VodVariantObservation
 import tv.darshini.domain.model.VideoFormat
@@ -9,60 +10,10 @@ import tv.darshini.player.AUDIO_VIDEO_OFFSET_MAX_MS
 import tv.darshini.player.AUDIO_VIDEO_OFFSET_MIN_MS
 import tv.darshini.player.PlaybackState
 import tv.darshini.player.PlayerError
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.collections.LinkedHashSet
-
-private const val THUMBNAIL_PRELOAD_BUCKET_MS = 10_000L
-private const val THUMBNAIL_PRELOAD_FRAME_BUDGET = 6
-
-internal fun buildThumbnailPreloadPositions(
-    durationMs: Long,
-    currentPositionMs: Long,
-    bucketMs: Long = THUMBNAIL_PRELOAD_BUCKET_MS,
-    frameBudget: Int = THUMBNAIL_PRELOAD_FRAME_BUDGET
-): List<Long> {
-    if (durationMs <= 0L || bucketMs <= 0L || frameBudget <= 0) return emptyList()
-
-    val maxPositionMs = durationMs.coerceAtLeast(0L)
-    val anchorPositionMs = (currentPositionMs.coerceIn(0L, maxPositionMs) / bucketMs) * bucketMs
-    val plannedPositions = LinkedHashSet<Long>()
-    var offsetMs = 0L
-
-    while (plannedPositions.size < frameBudget) {
-        val forwardPositionMs = anchorPositionMs + offsetMs
-        if (forwardPositionMs <= maxPositionMs) {
-            plannedPositions += forwardPositionMs
-        }
-        if (plannedPositions.size >= frameBudget) break
-
-        if (offsetMs > 0L) {
-            val backwardPositionMs = anchorPositionMs - offsetMs
-            if (backwardPositionMs >= 0L) {
-                plannedPositions += backwardPositionMs
-            }
-        }
-
-        if (forwardPositionMs > maxPositionMs && anchorPositionMs - offsetMs < 0L) {
-            break
-        }
-        offsetMs += bucketMs
-    }
-
-    return plannedPositions.toList()
-}
-
-internal fun shouldStartThumbnailPreload(
-    preloadKey: String,
-    lastCompletedPreloadKey: String?,
-    inFlightPreloadKey: String?
-): Boolean = preloadKey.isNotBlank() &&
-    preloadKey != lastCompletedPreloadKey &&
-    preloadKey != inFlightPreloadKey
 
 fun PlayerViewModel.selectAudioTrack(trackId: String) {
     playerEngine.selectAudioTrack(trackId)
@@ -244,6 +195,22 @@ fun PlayerViewModel.recordMovieVariantFailureObservation(error: PlayerError) {
     }
 }
 
+fun PlayerViewModel.cycleDecoderMode() {
+    val next = when (playerDiagnostics.value.decoderMode) {
+        DecoderMode.AUTO -> DecoderMode.HARDWARE
+        DecoderMode.HARDWARE -> DecoderMode.SOFTWARE
+        DecoderMode.SOFTWARE -> DecoderMode.COMPATIBILITY
+        DecoderMode.COMPATIBILITY -> DecoderMode.AUTO
+    }
+    // Manual choice overrides any automatic software retry made this session.
+    hasRetriedWithSoftwareDecoder = false
+    playerEngine.setDecoderMode(next)
+    updateDecoderMode(next)
+    viewModelScope.launch {
+        preferencesRepository.setPlayerDecoderMode(next)
+    }
+}
+
 fun PlayerViewModel.setPlaybackSpeed(speed: Float) {
     val normalizedSpeed = speed.coerceIn(0.5f, 2f)
     playerEngine.setPlaybackSpeed(normalizedSpeed)
@@ -358,34 +325,11 @@ fun PlayerViewModel.updateSeekPreview(positionMs: Long?) {
     }
 }
 
-internal fun PlayerViewModel.startThumbnailPreload() {
-    val url = currentResolvedPlaybackUrl.ifBlank { currentStreamUrl }
-    if (url.isBlank() || !seekThumbnailProvider.supportsFrameExtraction(url)) return
-    if (!shouldStartThumbnailPreload(url, lastCompletedThumbnailPreloadKey, inFlightThumbnailPreloadKey)) return
-    val durationMs = playerEngine.duration.value
-    if (durationMs <= 0L) return
-    val preloadPositions = buildThumbnailPreloadPositions(
-        durationMs = durationMs,
-        currentPositionMs = playerEngine.currentPosition.value
-    )
-    if (preloadPositions.isEmpty()) return
-
-    thumbnailPreloadJob?.cancel()
-    inFlightThumbnailPreloadKey = url
-    thumbnailPreloadJob = viewModelScope.launch(Dispatchers.Default) {
-        try {
-            preloadPositions.forEach { positionMs ->
-                ensureActive()
-                seekThumbnailProvider.loadFrame(url, positionMs)
-            }
-            lastCompletedThumbnailPreloadKey = url
-        } finally {
-            if (inFlightThumbnailPreloadKey == url) {
-                inFlightThumbnailPreloadKey = null
-            }
-        }
-    }
-}
+// Background thumbnail preloading was removed: MediaMetadataRetriever opens its OWN HTTP
+// connection to the stream, and IPTV providers cap concurrent connections per account (often 1).
+// The preload's connection made the provider drop ExoPlayer's, killing playback with
+// "ProtocolException: unexpected end of stream". Seek previews are now fetched only while the
+// user is actually scrubbing — see updateSeekPreview().
 
 internal fun PlayerViewModel.clearSeekPreview() {
     seekPreviewJob?.cancel()

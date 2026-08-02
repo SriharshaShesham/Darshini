@@ -130,6 +130,8 @@ class Media3PlayerEngine @Inject constructor(
         private const val TEXTURE_VIEW_STARTUP_TIMEOUT_MS = 9_000L
         private const val TEXTURE_VIEW_BUFFERED_STARTUP_THRESHOLD_MS = 4_000L
         private const val LIVE_HLS_STARTUP_GRACE_MS = 15_000L
+        // Buffered content at stall time below this means the network starved us, not the decoder.
+        private const val STARVED_STALL_BUFFER_MS = 1_000L
         private const val KNOWN_BAD_FAILURE_THRESHOLD = 3
         private const val MEDIA_SESSION_ID_PREFIX = "streamvault"
         private val nextMediaSessionInstanceId = AtomicLong(1L)
@@ -1734,9 +1736,14 @@ class Media3PlayerEngine @Inject constructor(
             resolvedStreamType = currentResolvedStreamType,
             recoveryAttempt = nextRecoveryAttempt
         )
+        // An empty buffer means the network starved us, not that the decoder froze — a frozen
+        // decoder sits on a full buffer it refuses to drain. Recorded so a stall can be told apart
+        // from a throttled provider after the fact.
+        val bufferedAtStallMs = _playerStats.value.bufferedDurationMs
+        val starvedStall = bufferedAtStallMs <= STARVED_STALL_BUFFER_MS
         Log.w(
             TAG,
-            "video-stall count=$videoStallCount recovered=$videoStallSafeRecoveryPerformed decoder=$selectedVideoDecoderName policy=$activeDecoderPolicy surface=${_renderSurfaceType.value} target=${PlaybackLogSanitizer.sanitizeUrl(streamInfo.url)}"
+            "video-stall count=$videoStallCount recovered=$videoStallSafeRecoveryPerformed buffered=${bufferedAtStallMs}ms starved=$starvedStall decoder=$selectedVideoDecoderName policy=$activeDecoderPolicy surface=${_renderSurfaceType.value} target=${PlaybackLogSanitizer.sanitizeUrl(streamInfo.url)}"
         )
 
         if (!isEffectivelyPlaybackStarted()) {
@@ -1745,6 +1752,24 @@ class Media3PlayerEngine @Inject constructor(
         }
 
         videoStallRecoveryAttempt = nextRecoveryAttempt
+
+        // Hardware decoder produced ZERO frames → it's incompatible with this stream, not merely
+        // stalled. Seen on MediaTek AVC decoders that fail OutputBufferProcess and never render a
+        // frame (video freezes while audio/clock advance). Retrying the same decoder is pointless,
+        // so on VOD jump straight to the software decoder instead of burning a stall cycle on a
+        // doomed same-decoder reprepare. Only when frames DID render (transient stall) do we fall
+        // through to the gentle same-decoder reprepare below.
+        if (
+            !hasRenderedFirstVideoFrame &&
+            !starvedStall &&
+            !isCurrentStreamLive() &&
+            requestedDecoderMode == DecoderMode.AUTO &&
+            tryVideoStallDecoderFallback(streamInfo, seekPosition, wasPlaying)
+        ) {
+            Log.w(TAG, "video-stall zero-frame hardware decoder → software escalation")
+            return
+        }
+
         if (liveReconnectionStall) {
             Log.w(TAG, "live-${_playbackState.value.name.lowercase()}-stall reconnect attempt=$videoStallRecoveryAttempt")
             prepareInternal(
@@ -1808,7 +1833,9 @@ class Media3PlayerEngine @Inject constructor(
             return
         }
 
-        if (tryVideoStallDecoderFallback(streamInfo, seekPosition, wasPlaying)) {
+        // Never blame the decoder for a starved buffer: swapping to the software decoder cannot
+        // conjure data, and on a low-power TV it makes the throttled stream play even worse.
+        if (!starvedStall && tryVideoStallDecoderFallback(streamInfo, seekPosition, wasPlaying)) {
             return
         }
 

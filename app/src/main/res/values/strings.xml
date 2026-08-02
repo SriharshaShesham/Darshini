@@ -1226,6 +1226,7 @@
     <string name="player_resume">Resume</string>
     <string name="player_playback_speed_title">Playback Speed</string>
     <string name="player_playback_speed_value">Speed %1$s</string>
+    <string name="player_decoder_mode_value">Decoder: %1$s</string>
     <string name="player_track_audio">Select Audio Track</string>
     <string name="player_track_subs">Select Subtitles</string>
     <string name="player_track_off">Off</string>

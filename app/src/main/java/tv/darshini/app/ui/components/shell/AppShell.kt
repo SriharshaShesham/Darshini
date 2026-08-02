@@ -471,6 +471,65 @@ fun AppScreenScaffold(
     }
 }
 
+/**
+ * Wraps a full-screen detail screen (movie/series) with the collapsed navigation rail so detail
+ * pages stay consistent with the rest of the app. Mirrors the rail chrome from [AppScreenScaffold]
+ * (focus sink + rail + content focus group) but without the screen header — the detail screen
+ * manages its own hero/content. On non-side-nav layouts (phones) the content renders unchanged.
+ */
+@Composable
+fun DetailScreenRailScaffold(
+    currentRoute: String,
+    onNavigate: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    if (!LocalUseSideNavigation.current) {
+        content()
+        return
+    }
+    var railExpanded by rememberSaveable { mutableStateOf(false) }
+    val railWidth by animateDpAsState(
+        targetValue = if (railExpanded) 240.dp else 72.dp,
+        label = "detailRailWidth"
+    )
+    val contentPaneFocusRequester = remember { FocusRequester() }
+    var fallbackFocusBounce by remember { mutableIntStateOf(0) }
+    LaunchedEffect(fallbackFocusBounce) {
+        if (fallbackFocusBounce > 0) {
+            contentPaneFocusRequester.requestFocusSafely(tag = "FocusDebug", target = "Detail content pane")
+        }
+    }
+    Row(modifier = modifier.fillMaxSize()) {
+        // Claims the default focus grant so it never lands on the rail hamburger (see AppScreenScaffold).
+        Box(
+            modifier = Modifier
+                .size(1.dp)
+                .onFocusChanged { if (it.isFocused) fallbackFocusBounce++ }
+                .focusTarget()
+        )
+        DestinationRail(
+            currentRoute = currentRoute,
+            onNavigate = onNavigate,
+            isExpanded = railExpanded,
+            onToggleExpanded = { railExpanded = !railExpanded },
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(railWidth)
+        )
+        Box(
+            modifier = Modifier
+                .focusRequester(contentPaneFocusRequester)
+                .focusRestorer()
+                .focusGroup()
+                .weight(1f)
+                .fillMaxSize()
+        ) {
+            content()
+        }
+    }
+}
+
 @Composable
 fun AppScreenHeader(
     title: String,
