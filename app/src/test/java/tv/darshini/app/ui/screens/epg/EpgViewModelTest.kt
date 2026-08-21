@@ -89,6 +89,9 @@ class EpgViewModelTest {
         whenever(providerRepository.getActiveProvider()).thenReturn(flowOf(null))
         whenever(preferencesRepository.parentalControlLevel).thenReturn(flowOf(0))
         whenever(preferencesRepository.showAllChannelsCategory).thenReturn(flowOf(true))
+        // Part of the guide category combine(); an unstubbed mock returns null and kills the
+        // whole pipeline with an NPE inside combine, not a readable assertion failure.
+        whenever(preferencesRepository.getCategoryLanguagePriority(any(), any())).thenReturn(flowOf(emptyList()))
         whenever(combinedM3uRepository.getActiveLiveSource()).thenReturn(flowOf(null))
         whenever(preferencesRepository.guideDefaultCategoryId).thenReturn(flowOf(null))
         whenever(livePreviewHandoffManager.reverseSessionFlow).thenReturn(MutableStateFlow(null))

@@ -7,12 +7,16 @@ import org.junit.Test
 class PlayerMediaSourceFactoryTest {
 
     @Test
-    fun `live mpeg ts extractor uses hls mode to avoid finite progressive duration`() {
+    fun `live mpeg ts extractor stays off hls mode`() {
+        // Live channels are a continuous raw MPEG-TS feed driven by a ProgressiveMediaSource.
+        // MODE_HLS needs an HLS-supplied timestamp adjuster and throws IllegalStateException
+        // without one, which took out every live channel. The exact fallback mode is Media3's
+        // default and not the point - staying off MODE_HLS is.
         val factory = liveMpegTsExtractorsFactory()
         val modeField = factory::class.java.getDeclaredField("tsMode").apply {
             isAccessible = true
         }
 
-        assertThat(modeField.getInt(factory)).isEqualTo(TsExtractor.MODE_HLS)
+        assertThat(modeField.getInt(factory)).isNotEqualTo(TsExtractor.MODE_HLS)
     }
 }

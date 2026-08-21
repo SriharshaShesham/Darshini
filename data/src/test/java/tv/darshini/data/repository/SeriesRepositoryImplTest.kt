@@ -75,6 +75,29 @@ class SeriesRepositoryImplTest {
 
     private val seriesDao: SeriesDao = mock()
     private val episodeDao: EpisodeDao = mock()
+
+    /**
+     * The "fresh xtream details" short-circuit in SeriesRepositoryImpl only fires when the series
+     * still has episodes on disk - a DETAIL_HYDRATED row with zero episodes deliberately falls
+     * through and re-fetches. Fixtures that expect the short-circuit must say episodes exist.
+     */
+    private suspend fun stubPersistedEpisodes(seriesRowId: Long) {
+        whenever(episodeDao.getBySeriesSync(seriesRowId)).thenReturn(
+            listOf(
+                EpisodeBrowseEntity(
+                    id = 1L,
+                    episodeId = 7001L,
+                    title = "Pilot",
+                    episodeNumber = 1,
+                    seasonNumber = 1,
+                    streamUrl = "internal://episode/7001",
+                    seriesId = seriesRowId,
+                    providerId = 7L
+                )
+            )
+        )
+        whenever(episodeDao.countBySeries(seriesRowId)).thenReturn(1)
+    }
     private val categoryDao: CategoryDao = mock()
     private val favoriteDao: FavoriteDao = mock()
     private val playbackHistoryDao: PlaybackHistoryDao = mock()
@@ -178,7 +201,7 @@ class SeriesRepositoryImplTest {
                 status = ProviderStatus.ACTIVE
             )
         )
-        whenever(episodeDao.getBySeriesSync(99L)).thenReturn(emptyList())
+        stubPersistedEpisodes(seriesRowId = 99L)
 
         val result = createRepository().getSeriesDetails(7L, 99L)
 
@@ -222,7 +245,7 @@ class SeriesRepositoryImplTest {
                 status = ProviderStatus.ACTIVE
             )
         )
-        whenever(episodeDao.getBySeriesSync(99L)).thenReturn(emptyList())
+        stubPersistedEpisodes(seriesRowId = 99L)
 
         val result = createRepository(
             duplicateHandlingMode = VodDuplicateHandlingMode.SMART,
@@ -262,7 +285,7 @@ class SeriesRepositoryImplTest {
                 status = ProviderStatus.ACTIVE
             )
         )
-        whenever(episodeDao.getBySeriesSync(99L)).thenReturn(emptyList())
+        stubPersistedEpisodes(seriesRowId = 99L)
 
         val knownPresentation = SeriesDetailPresentationHint(
             providerId = 7L,
