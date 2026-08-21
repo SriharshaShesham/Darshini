@@ -670,9 +670,6 @@ internal class SyncCatalogStore(
             items = movies,
             keySelector = { movie -> movie.streamId },
             limit = sizeLimits.maxMoviesPerProvider,
-            bestFirstComparator = compareByDescending<MovieEntity> { it.rating }
-                .thenBy { it.name.lowercase() }
-                .thenBy { it.streamId },
             logLabel = "movies",
             providerId = providerId,
             stageBuilder = { movie -> movieStageEntity(providerId, sessionId, movie) },
@@ -689,9 +686,6 @@ internal class SyncCatalogStore(
             items = series,
             keySelector = { item -> item.seriesId },
             limit = sizeLimits.maxSeriesPerProvider,
-            bestFirstComparator = compareByDescending<SeriesEntity> { it.rating }
-                .thenBy { it.name.lowercase() }
-                .thenBy { it.seriesId },
             logLabel = "series",
             providerId = providerId,
             stageBuilder = { item -> seriesStageEntity(providerId, sessionId, item) },
@@ -703,7 +697,6 @@ internal class SyncCatalogStore(
         items: Sequence<T>,
         keySelector: (T) -> K,
         limit: Int,
-        bestFirstComparator: Comparator<T>,
         logLabel: String,
         providerId: Long,
         stageBuilder: (T) -> S,

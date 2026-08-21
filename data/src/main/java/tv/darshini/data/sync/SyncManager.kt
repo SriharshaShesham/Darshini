@@ -185,6 +185,7 @@ class SyncManager @Inject constructor(
     private val xtreamLiveOnboardingDao: XtreamLiveOnboardingDao,
     private val stalkerApiService: StalkerApiService,
     private val episodeDao: EpisodeDao,
+    private val contentBindingDao: tv.darshini.data.local.dao.ContentBindingDao,
     private val jellyfinProvider: JellyfinProvider,
     private val xtreamJson: Json,
     private val m3uParser: M3uParser,
@@ -700,6 +701,9 @@ class SyncManager @Inject constructor(
                     }
                 }
                 providerDao.updateSyncTime(providerId, System.currentTimeMillis())
+                // Catalog row ids may have been re-issued (first sync after a restore, provider
+                // re-add). Re-point favourites and watch progress at them via their provider-side ids.
+                contentBindingDao.rebind(providerId)
                 updateSyncStatusMetadata(
                     providerId = providerId,
                     status = if (outcome.partial) "PARTIAL" else "SUCCESS"
@@ -2230,7 +2234,9 @@ class SyncManager @Inject constructor(
                         items = dedupedItems,
                         totalPages = result.data.totalPages,
                         pageSize = result.data.pageSize,
-                        isComplete = true,
+                        // Was hardcoded true, which retired every category after its first page -
+                        // only the first pageful of each Stalker VOD category was ever indexed.
+                        isComplete = result.data.isComplete,
                         pageFingerprint = pageFingerprint
                     )
                 }
