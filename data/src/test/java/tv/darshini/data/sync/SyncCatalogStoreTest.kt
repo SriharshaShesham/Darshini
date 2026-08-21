@@ -502,7 +502,7 @@ class SyncCatalogStoreTest {
     }
 
     @Test
-    fun `replaceMovieCatalog keeps highest rated movies within configured budget`() = runTest {
+    fun `replaceMovieCatalog keeps the first movies within configured budget`() = runTest {
         val providerId = 11L
         whenever(movieDao.getByProviderSync(providerId)).thenReturn(emptyList())
         whenever(catalogSyncDao.getMovieStages(eq(providerId), any())).thenReturn(emptyList())
@@ -519,7 +519,9 @@ class SyncCatalogStoreTest {
         assertThat(acceptedCount).isEqualTo(2)
         val insertedMovies = argumentCaptor<List<MovieImportStageEntity>>()
         verify(catalogSyncDao).insertMovieStages(insertedMovies.capture())
-        assertThat(insertedMovies.firstValue.map { it.streamId }).containsExactly(2002L, 2003L).inOrder()
+        // Staging is a single streaming pass, so the budget keeps the first N distinct rows in
+        // arrival order - not the best-rated N, which would mean buffering `limit` entities.
+        assertThat(insertedMovies.firstValue.map { it.streamId }).containsExactly(2001L, 2002L).inOrder()
         verify(catalogSyncDao).rebuildMovieFts()
     }
 
