@@ -62,8 +62,8 @@ android {
         applicationId = "tv.darshini.app"
         minSdk = 25
         targetSdk = 36
-        versionCode = 19
-        versionName = "1.3"
+        versionCode = 20
+        versionName = "1.4-beta"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "OFFICIAL_APPLICATION_ID", "\"tv.darshini.app\"")
         buildConfigField("String", "OFFICIAL_SIGNING_CERT_SHA256", "\"$officialSigningCertSha256\"")

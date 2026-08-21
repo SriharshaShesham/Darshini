@@ -43,12 +43,19 @@ jobs:
           # published an APK claiming to be 1.0.0 regardless of what was built.
           VERSION="${GITHUB_REF_NAME:-dev}"
           cp app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/darshini.${VERSION}.apk"
+          # Stable filename so /releases/latest/download/darshini.apk is a permanent
+          # URL. darshini.sheshams.in redirects there — do not rename this asset.
+          cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/darshini.apk
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          # A tag with a suffix (v1.4-beta) publishes as a pre-release, which keeps it out of
+          # /releases/latest — so darshini.sheshams.in keeps serving the last stable build.
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             app/build/outputs/apk/release/darshini.${{ github.ref_name }}.apk
+            app/build/outputs/apk/release/darshini.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
