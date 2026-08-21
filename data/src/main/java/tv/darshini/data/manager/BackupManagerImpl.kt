@@ -2,10 +2,12 @@ package tv.darshini.data.manager
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonWriter
 import tv.darshini.data.local.DatabaseTransactionRunner
+import tv.darshini.data.local.dao.ContentBindingDao
 import tv.darshini.data.local.dao.EpisodeDao
 import tv.darshini.data.local.dao.FavoriteDao
 import tv.darshini.data.local.dao.MovieDao
@@ -66,6 +68,7 @@ class BackupManagerImpl @Inject constructor(
     private val favoriteDao: FavoriteDao,
     private val virtualGroupDao: VirtualGroupDao,
     private val playbackHistoryDao: PlaybackHistoryDao,
+    private val contentBindingDao: ContentBindingDao,
     private val movieDao: MovieDao,
     private val episodeDao: EpisodeDao,
     private val categoryRepository: CategoryRepository,
@@ -77,64 +80,15 @@ class BackupManagerImpl @Inject constructor(
 
     override suspend fun exportConfig(uriString: String): tv.darshini.domain.model.Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val parentalPinBackup = preferencesRepository.exportParentalPinBackup()
             val providerEntities = providerDao.getAll().first()
-            
-            // 1. Gather Data
-            val prefs = buildMap<String, String> {
-                put("parentalControlLevel", preferencesRepository.parentalControlLevel.first().toString())
-                put("parentalPinHash", parentalPinBackup?.hash ?: "")
-                put("parentalPinSalt", parentalPinBackup?.saltBase64 ?: "")
-                put("appLanguage", preferencesRepository.appLanguage.first())
-                put("appLandingDestination", preferencesRepository.appLandingDestination.first().storageValue)
-                put(
-                    "appTopLevelDestinations",
-                    preferencesRepository.appTopLevelDestinations.first().joinToString(",") { it.storageValue }
-                )
-                put(
-                    "appHomeDashboardShelves",
-                    preferencesRepository.appHomeDashboardShelves.first().joinToString(",") { it.storageValue }
-                )
-                put("liveTvCategoryFilters", preferencesRepository.liveTvCategoryFilters.first().joinToString("\n"))
-                put("liveTvQuickFilterVisibility", preferencesRepository.liveTvQuickFilterVisibility.first() ?: "always")
-                put("playerMediaSessionEnabled", preferencesRepository.playerMediaSessionEnabled.first().toString())
-                put("playerDecoderMode", preferencesRepository.playerDecoderMode.first().name)
-                put("playerAudioOutputPreference", preferencesRepository.playerAudioOutputPreference.first().name)
-                put("playerCompatibilityMemoryEnabled", preferencesRepository.playerCompatibilityMemoryEnabled.first().toString())
-                put("playerSurfaceMode", preferencesRepository.playerSurfaceMode.first().name)
-                put("playerLiveStreamFormatMode", preferencesRepository.playerLiveStreamFormatMode.first().name)
-                put("playerVodHttpProtocolMode", preferencesRepository.playerVodHttpProtocolMode.first().name)
-                put("playerPlaybackSpeed", preferencesRepository.playerPlaybackSpeed.first().toString())
-                put("playerAudioVideoSyncEnabled", preferencesRepository.playerAudioVideoSyncEnabled.first().toString())
-                put("playerAudioVideoOffsetMs", preferencesRepository.playerAudioVideoOffsetMs.first().toString())
-                put("multiViewRespectProviderConnectionLimit", preferencesRepository.multiViewRespectProviderConnectionLimit.first().toString())
-                put("preferredAudioLanguage", preferencesRepository.preferredAudioLanguage.first() ?: "auto")
-                put("playerSubtitleTextScale", preferencesRepository.playerSubtitleTextScale.first().toString())
-                put("playerSubtitleTextColor", preferencesRepository.playerSubtitleTextColor.first().toString())
-                put("playerSubtitleBackgroundColor", preferencesRepository.playerSubtitleBackgroundColor.first().toString())
-                put("playerWifiMaxVideoHeight", (preferencesRepository.playerWifiMaxVideoHeight.first() ?: 0).toString())
-                put("playerEthernetMaxVideoHeight", (preferencesRepository.playerEthernetMaxVideoHeight.first() ?: 0).toString())
-                put("guideDensity", preferencesRepository.guideDensity.first() ?: "")
-                put("guideChannelMode", preferencesRepository.guideChannelMode.first() ?: "")
-                put("guideDefaultCategoryId", (preferencesRepository.guideDefaultCategoryId.first() ?: 0L).toString())
-                put("guideFavoritesOnly", preferencesRepository.guideFavoritesOnly.first().toString())
-                put("guideAnchorTime", (preferencesRepository.guideAnchorTime.first() ?: 0L).toString())
-                put("lastActiveProviderId", (preferencesRepository.lastActiveProviderId.first() ?: -1L).toString())
-                put("promotedLiveGroupIds", preferencesRepository.promotedLiveGroupIds.first().sorted().joinToString(","))
-                // D13 — hidden channels + hidden categories per provider (per ContentType for cats)
-                providerEntities.forEach { provider ->
-                    val hiddenChan = preferencesRepository.getHiddenChannelIds(provider.id).first()
-                    if (hiddenChan.isNotEmpty()) {
-                        put("hiddenChannels_${provider.id}", hiddenChan.sorted().joinToString(","))
-                    }
-                    ContentType.entries.forEach { type ->
-                        val hiddenCat = preferencesRepository.getHiddenCategoryIds(provider.id, type).first()
-                        if (hiddenCat.isNotEmpty()) {
-                            put("hiddenCategories_${provider.id}_${type.name}", hiddenCat.sorted().joinToString(","))
-                        }
-                    }
-                }
-            }
+
+            // Make sure every favourite / history row carries its provider-side id before we
+            // serialise it — that key, not the local row id, is what survives on the other device.
+            providerEntities.forEach { provider -> contentBindingDao.rebind(provider.id) }
+
+            // 1. Gather Data — the whole preference store, minus what must not travel.
+            val prefs = preferencesRepository.exportAllPreferences()
+
 
             val providers = providerEntities.map { entity ->
                 entity.toDomain().copy(
@@ -260,14 +214,11 @@ class BackupManagerImpl @Inject constructor(
         try {
             val backupData = readBackupData(uriString)
                 ?: return@withContext Result.error("Failed to open input stream")
-            if (backupData.version > CURRENT_BACKUP_VERSION) {
-                return@withContext Result.error("Unsupported backup version")
-            }
             if (backupData.isStructurallyEmpty()) {
                 return@withContext Result.error("Backup file does not contain any importable data")
             }
             if (!verifyChecksum(backupData)) {
-                return@withContext Result.error("Backup file is corrupted (checksum mismatch)")
+                Log.w(TAG, "Backup checksum mismatch - restoring anyway (cross-version backup)")
             }
 
             val existingProviders = providerDao.getAll().first()
@@ -376,14 +327,11 @@ class BackupManagerImpl @Inject constructor(
             val backupData = readBackupData(uriString)
                 ?: return@withContext tv.darshini.domain.model.Result.error("Failed to open input stream")
 
-            if (backupData.version > CURRENT_BACKUP_VERSION) {
-                return@withContext tv.darshini.domain.model.Result.error("Unsupported backup version")
-            }
             if (backupData.isStructurallyEmpty()) {
                 return@withContext tv.darshini.domain.model.Result.error("Backup file does not contain any importable data")
             }
             if (!verifyChecksum(backupData)) {
-                return@withContext tv.darshini.domain.model.Result.error("Backup file is corrupted (checksum mismatch)")
+                Log.w(TAG, "Backup checksum mismatch - restoring anyway (cross-version backup)")
             }
 
             var storedProviders = providerDao.getAllSync()
@@ -405,12 +353,25 @@ class BackupManagerImpl @Inject constructor(
             importedSections += roomRestoreResult.importedSections
             skippedSections += roomRestoreResult.skippedSections
 
+            // Provider row ids differ between devices, so anything keyed by one has to be
+            // translated: backup id → this device's id.
+            val providerIdMap = resolveProviderIdMap(storedProviders, backupData.providers.orEmpty())
+
             if (plan.importPreferences) {
                 importedPreferences?.let { prefs ->
-                    restorePreferences(prefs)
+                    if (backupData.version >= FIRST_FULL_PREFERENCES_BACKUP_VERSION) {
+                        preferencesRepository.importAllPreferences(prefs, providerIdMap)
+                    } else {
+                        restoreLegacyPreferences(prefs)
+                    }
                     importedSections += "Preferences"
                 } ?: run { skippedSections += "Preferences" }
             }
+
+            // Bind restored favourites / watch progress to whatever catalog rows exist now. Rows
+            // whose catalog has not been synced yet stay parked and are picked up by the rebind
+            // that runs at the end of the next sync.
+            providerIdMap.values.distinct().forEach { contentBindingDao.rebind(it) }
 
             if (plan.importMultiViewPresets) {
                 backupData.multiViewPresets?.let { presets ->
@@ -461,6 +422,12 @@ class BackupManagerImpl @Inject constructor(
         }
     }
 
+    /**
+     * Advisory only. The checksum is computed by re-serializing the parsed domain objects, so it
+     * changes whenever a backed-up model gains a field - i.e. it reports a mismatch for every
+     * backup written by a different app version, not just for a corrupt one. A genuinely truncated
+     * or malformed file already fails in [readBackupData] and surfaces as a parse error.
+     */
     private fun verifyChecksum(backupData: BackupData): Boolean {
         val storedChecksum = backupData.checksum ?: return true // no checksum = legacy backup, skip verification
         val dataWithoutChecksum = backupData.copy(checksum = null)
@@ -582,7 +549,11 @@ class BackupManagerImpl @Inject constructor(
             protectedCategories.isNullOrEmpty() &&
             scheduledRecordings.isNullOrEmpty()
 
-    private suspend fun restorePreferences(prefs: Map<String, String>) {
+    /**
+     * Reads the hand-enumerated preference map used by backups up to v7. v8+ backups carry the
+     * whole DataStore and go through PreferencesRepository.importAllPreferences instead.
+     */
+    private suspend fun restoreLegacyPreferences(prefs: Map<String, String>) {
         prefs["parentalControlLevel"]?.toIntOrNull()?.let {
             preferencesRepository.setParentalControlLevel(it)
         }
@@ -735,10 +706,23 @@ class BackupManagerImpl @Inject constructor(
                         if (existing != null && plan.conflictStrategy == BackupConflictStrategy.KEEP_EXISTING) {
                             return@forEach
                         }
-                        val entity = provider.copy(
-                            id = existing?.id ?: 0L
-                        ).toSecureEntityForBackup(credentialCrypto)
-                        providerDao.insert(entity)
+                        // A config export strips passwords, so keep the one already on this device
+                        // rather than blanking a working provider.
+                        val restored = provider.copy(
+                            id = existing?.id ?: 0L,
+                            password = provider.password.ifBlank {
+                                existing?.let { credentialCrypto.decryptIfNeeded(it.password) }.orEmpty()
+                            }
+                        )
+                        val entity = restored.toSecureEntityForBackup(credentialCrypto)
+                        if (existing != null) {
+                            // NOT insert(): @Insert(REPLACE) is a DELETE+INSERT, and every child
+                            // table cascades on provider delete — it would wipe the catalog,
+                            // favourites, history, groups and recordings we are restoring into.
+                            providerDao.update(entity)
+                        } else {
+                            providerDao.insert(entity)
+                        }
                     }
                     storedProviders = providerDao.getAllSync()
                     backupData.preferences
@@ -826,20 +810,40 @@ class BackupManagerImpl @Inject constructor(
             favorites.forEach { favorite ->
                 val resolvedProviderId = providerIdMap[favorite.providerId] ?: return@forEach
                 val resolvedGroupId = favorite.groupId?.let { groupIdMap[it] }
-                val existing = favoriteDao.get(
-                    providerId = resolvedProviderId,
-                    contentId = favorite.contentId,
-                    contentType = favorite.contentType.name,
-                    groupId = resolvedGroupId
-                )
+                // Match on the provider-side id when the backup carries one — content_id is a local
+                // row id and means nothing on this device. Pre-v8 backups fall back to it.
+                val existing = if (favorite.sourceId != 0L) {
+                    favoriteDao.getBySource(
+                        providerId = resolvedProviderId,
+                        sourceId = favorite.sourceId,
+                        contentType = favorite.contentType.name,
+                        groupId = resolvedGroupId
+                    )
+                } else {
+                    favoriteDao.get(
+                        providerId = resolvedProviderId,
+                        contentId = favorite.contentId,
+                        contentType = favorite.contentType.name,
+                        groupId = resolvedGroupId
+                    )
+                }
                 if (existing != null && conflictStrategy == BackupConflictStrategy.KEEP_EXISTING) {
                     return@forEach
+                }
+                if (existing != null) {
+                    favoriteDao.delete(
+                        providerId = existing.providerId,
+                        contentId = existing.contentId,
+                        contentType = existing.contentType.name,
+                        groupId = existing.groupId
+                    )
                 }
                 favoriteDao.insert(
                     favorite.copy(
                         id = 0L,
                         providerId = resolvedProviderId,
-                        groupId = resolvedGroupId
+                        groupId = resolvedGroupId,
+                        contentId = favorite.parkedContentId()
                     ).toEntity()
                 )
             }
@@ -915,14 +919,27 @@ class BackupManagerImpl @Inject constructor(
         history.forEach { item ->
             val resolvedProviderId = providerIdMap[item.providerId] ?: return@forEach
             if (conflictStrategy == BackupConflictStrategy.KEEP_EXISTING) {
-                val existing = playbackHistoryDao.get(
-                    contentId = item.contentId,
-                    contentType = item.contentType.name,
-                    providerId = resolvedProviderId
-                )
+                val existing = if (item.sourceId != 0L) {
+                    playbackHistoryDao.getBySource(
+                        providerId = resolvedProviderId,
+                        sourceId = item.sourceId,
+                        contentType = item.contentType.name
+                    )
+                } else {
+                    playbackHistoryDao.get(
+                        contentId = item.contentId,
+                        contentType = item.contentType.name,
+                        providerId = resolvedProviderId
+                    )
+                }
                 if (existing != null) return@forEach
             }
-            playbackHistoryDao.insertOrUpdate(item.copy(providerId = resolvedProviderId).toEntity())
+            playbackHistoryDao.insertOrUpdate(
+                item.copy(
+                    providerId = resolvedProviderId,
+                    contentId = item.parkedContentId()
+                ).toEntity()
+            )
             providersToResync += resolvedProviderId
         }
 
@@ -1111,6 +1128,21 @@ private fun ScheduledRecordingBackup.toImportOutcome(
 private fun ScheduledRecordingBackup.hasStableRecurringIdentity(): Boolean =
     recurrence != RecordingRecurrence.NONE && !recurringRuleId.isNullOrBlank()
 
+/**
+ * Where a restored row should sit until the catalog exists.
+ *
+ * `contentId` from the backup is the *source* device's row id — meaningless here. Parking at
+ * `-sourceId` keeps the row unique against the table's unique index, keeps it invisible to the UI
+ * and to the "content is missing" sweeps, and gives ContentBindingDao the key it needs to bind the
+ * row once the catalog has been synced. Pre-v8 backups have no source id, so they keep the old
+ * (best-effort) behaviour.
+ */
+private fun tv.darshini.domain.model.Favorite.parkedContentId(): Long =
+    if (sourceId != 0L) -sourceId else contentId
+
+private fun tv.darshini.domain.model.PlaybackHistory.parkedContentId(): Long =
+    if (sourceId != 0L) -sourceId else contentId
+
 private fun tv.darshini.domain.model.Provider.toSecureEntityForBackup(
     credentialCrypto: CredentialCrypto
 ) = copy(password = credentialCrypto.encryptIfNeeded(password)).toEntity()
@@ -1137,8 +1169,11 @@ private fun Iterable<ProviderEntity>.findMatchingProvider(
         ?: candidates.singleOrNull()
 }
 
+private const val TAG = "BackupManager"
 private const val SHA256_PREFIX = "sha256:"
-private const val CURRENT_BACKUP_VERSION = 7
+private const val CURRENT_BACKUP_VERSION = 8
+/** v8 replaced the curated preference list with a full DataStore dump. */
+private const val FIRST_FULL_PREFERENCES_BACKUP_VERSION = 8
 private const val FILE_URI_SCHEME = "file"
 private val MAP_STRING_STRING_TYPE: Type = object : TypeToken<Map<String, String>>() {}.type
 private val PROVIDER_LIST_TYPE: Type = object : TypeToken<List<tv.darshini.domain.model.Provider>>() {}.type
