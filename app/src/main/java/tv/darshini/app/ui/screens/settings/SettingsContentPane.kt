@@ -192,7 +192,8 @@ internal fun SettingsContentPane(
                 onSignIn = onDriveSignIn,
                 onSignOut = onDriveSignOut,
                 onPush = onDrivePush,
-                onPull = onDrivePull
+                onPull = onDrivePull,
+                onCadenceChange = viewModel::setDriveSyncCadence
             )
         } else if (dialogState.selectedCategory == 7) {
             epgSourcesSection(

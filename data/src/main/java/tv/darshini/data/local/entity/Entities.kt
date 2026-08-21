@@ -670,6 +670,13 @@ data class FavoriteEntity(
     val id: Long = 0,
     @ColumnInfo(name = "provider_id") val providerId: Long,
     @ColumnInfo(name = "content_id") val contentId: Long,
+    /**
+     * Provider-side stable id of the favourited item (channels.stream_id / movies.stream_id /
+     * series.series_id). [contentId] is a local autoincrement row id that does not survive a
+     * reinstall or a catalog wipe, so backup/restore binds through this instead. Kept in sync
+     * with [contentId] by ContentBindingDao; 0 means "not resolved yet".
+     */
+    @ColumnInfo(name = "source_id") val sourceId: Long = 0,
     @ColumnInfo(name = "content_type") val contentType: ContentType,
     val position: Int = 0,
     @ColumnInfo(name = "group_id") val groupId: Long? = null,
@@ -727,6 +734,8 @@ data class PlaybackHistoryEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     @ColumnInfo(name = "content_id") val contentId: Long,
+    /** Provider-side stable id of the watched item. See [FavoriteEntity.sourceId]. */
+    @ColumnInfo(name = "source_id") val sourceId: Long = 0,
     @ColumnInfo(name = "content_type") val contentType: ContentType,
     @ColumnInfo(name = "provider_id") val providerId: Long,
     val title: String = "",
@@ -766,6 +775,7 @@ data class TmdbIdentityEntity(
 data class PlaybackHistoryLiteEntity(
     val id: Long = 0,
     @ColumnInfo(name = "content_id") val contentId: Long,
+    @ColumnInfo(name = "source_id") val sourceId: Long = 0,
     @ColumnInfo(name = "content_type") val contentType: ContentType,
     @ColumnInfo(name = "provider_id") val providerId: Long,
     val title: String = "",

@@ -27,6 +27,7 @@ import tv.darshini.domain.model.ActiveLiveSource
 import tv.darshini.domain.model.AppHomeDashboardShelf
 import tv.darshini.domain.model.AppLandingDestination
 import tv.darshini.domain.model.AppTimeFormat
+import tv.darshini.domain.model.DriveSyncCadence
 import tv.darshini.domain.model.SyncCadence
 import tv.darshini.domain.model.LiveChannelGroupingMode
 import tv.darshini.domain.model.LiveChannelObservedQuality
@@ -203,6 +204,10 @@ class PreferencesRepository @Inject constructor(
         val MAX_CONCURRENT_STREAMS = intPreferencesKey("max_concurrent_streams")
         val LAST_APP_UPDATE_CHECK_TIMESTAMP = longPreferencesKey("last_app_update_check_timestamp")
         val PROVIDER_SYNC_CADENCE = stringPreferencesKey("provider_sync_cadence")
+        val DRIVE_SYNC_CADENCE = stringPreferencesKey("drive_sync_cadence")
+        val DRIVE_LAST_PUSH_AT = longPreferencesKey("drive_last_push_at")
+        val DRIVE_LAST_PULL_AT = longPreferencesKey("drive_last_pull_at")
+        val DRIVE_LAST_ERROR = stringPreferencesKey("drive_last_error")
         val LAST_LAUNCH_SYNC_TIMESTAMP = longPreferencesKey("last_launch_sync_timestamp")
         val APP_UPDATE_DOWNLOAD_ID = longPreferencesKey("app_update_download_id")
         val APP_UPDATE_DOWNLOAD_VERSION_NAME = stringPreferencesKey("app_update_download_version_name")
@@ -605,6 +610,23 @@ class PreferencesRepository @Inject constructor(
         preferences[PreferencesKeys.LAST_LAUNCH_SYNC_TIMESTAMP]?.takeIf { it > 0L }
     }
 
+    val driveSyncCadence: Flow<DriveSyncCadence> = context.dataStore.data.map { preferences ->
+        DriveSyncCadence.fromName(preferences[PreferencesKeys.DRIVE_SYNC_CADENCE])
+    }
+
+    // Persisted rather than held in memory so "Last synced" survives an app restart.
+    val driveLastPushAt: Flow<Long?> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.DRIVE_LAST_PUSH_AT]?.takeIf { it > 0L }
+    }
+
+    val driveLastPullAt: Flow<Long?> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.DRIVE_LAST_PULL_AT]?.takeIf { it > 0L }
+    }
+
+    val driveLastError: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.DRIVE_LAST_ERROR]?.takeIf { it.isNotBlank() }
+    }
+
     val appUpdateDownloadId: Flow<Long?> = context.dataStore.data.map { preferences ->
         preferences[PreferencesKeys.APP_UPDATE_DOWNLOAD_ID]?.takeIf { it > 0L }
     }
@@ -752,6 +774,34 @@ class PreferencesRepository @Inject constructor(
     suspend fun setProviderSyncCadence(cadence: SyncCadence) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.PROVIDER_SYNC_CADENCE] = cadence.name
+        }
+    }
+
+    suspend fun setDriveSyncCadence(cadence: DriveSyncCadence) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.DRIVE_SYNC_CADENCE] = cadence.name
+        }
+    }
+
+    suspend fun setDriveLastPushAt(timestampMs: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.DRIVE_LAST_PUSH_AT] = timestampMs
+        }
+    }
+
+    suspend fun setDriveLastPullAt(timestampMs: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.DRIVE_LAST_PULL_AT] = timestampMs
+        }
+    }
+
+    suspend fun setDriveLastError(message: String?) {
+        context.dataStore.edit { preferences ->
+            if (message.isNullOrBlank()) {
+                preferences.remove(PreferencesKeys.DRIVE_LAST_ERROR)
+            } else {
+                preferences[PreferencesKeys.DRIVE_LAST_ERROR] = message
+            }
         }
     }
 
@@ -1248,6 +1298,36 @@ class PreferencesRepository @Inject constructor(
                 preferences[PreferencesKeys.PARENTAL_PIN_HASH] = backup.hash
                 preferences[PreferencesKeys.PARENTAL_PIN_SALT] = backup.saltBase64
                 preferences.remove(PreferencesKeys.LEGACY_PARENTAL_PIN)
+            }
+        }
+    }
+
+    /**
+     * Every backup-worthy preference, encoded as `type:value`. Replaces the hand-maintained key
+     * list the backup used to carry — see [PreferencesBackup] for what is deliberately left out.
+     */
+    suspend fun exportAllPreferences(): Map<String, String> =
+        context.dataStore.data.first().asMap()
+            .asSequence()
+            .filter { (key, _) -> PreferencesBackup.shouldBackUp(key.name) }
+            .mapNotNull { (key, value) ->
+                PreferencesBackup.encode(value)?.let { key.name to it }
+            }
+            .toMap()
+
+    /**
+     * Restores [values] produced by [exportAllPreferences], rewriting provider row ids through
+     * [providerIdMap] (backup id → this device's id) so per-provider settings land on the keys the
+     * app actually reads.
+     */
+    suspend fun importAllPreferences(values: Map<String, String>, providerIdMap: Map<Long, Long>) {
+        context.dataStore.edit { preferences ->
+            values.forEach { (keyName, encoded) ->
+                if (!PreferencesBackup.shouldBackUp(keyName)) return@forEach
+                val targetKey = PreferencesBackup.remapKey(keyName, providerIdMap) ?: return@forEach
+                val targetValue = PreferencesBackup.remapValue(keyName, encoded, providerIdMap)
+                    ?: return@forEach
+                PreferencesBackup.apply(preferences, targetKey, targetValue)
             }
         }
     }

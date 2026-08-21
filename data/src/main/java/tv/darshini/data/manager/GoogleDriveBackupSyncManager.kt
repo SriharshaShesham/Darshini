@@ -28,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
@@ -63,6 +64,8 @@ import javax.inject.Singleton
 class GoogleDriveBackupSyncManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val backupManager: BackupManager,
+    private val providerRepository: tv.darshini.domain.repository.ProviderRepository,
+    private val preferencesRepository: tv.darshini.data.preferences.PreferencesRepository,
 ) : DriveBackupSyncManager {
 
     private val httpClient: OkHttpClient = OkHttpClient.Builder()
@@ -193,6 +196,31 @@ class GoogleDriveBackupSyncManager @Inject constructor(
         Result.Success(updated)
     }
 
+    override suspend fun pushAll(): Result<DriveSyncStatus> = withContext(Dispatchers.IO) {
+        if (providerRepository.getProviders().first().isEmpty()) {
+            Log.w("DriveSync", "pushAll: no providers configured, refusing to overwrite remote backup")
+            return@withContext Result.Error(DriveSyncError.EXPORT_FAILED)
+        }
+        when (val backupResult = pushBackup()) {
+            is Result.Error -> {
+                preferencesRepository.setDriveLastError(backupResult.message)
+                return@withContext backupResult
+            }
+            else -> Unit
+        }
+        val credentialsResult = pushCredentials(providerRepository.getAllProviderCredentials())
+        if (credentialsResult is Result.Error) {
+            preferencesRepository.setDriveLastError(credentialsResult.message)
+            return@withContext Result.Error(credentialsResult.message, credentialsResult.exception)
+        }
+        val now = System.currentTimeMillis()
+        preferencesRepository.setDriveLastPushAt(now)
+        preferencesRepository.setDriveLastError(null)
+        val updated = _syncStatus.value.copy(lastPushAtMs = now, lastErrorMessage = null)
+        _syncStatus.value = updated
+        Result.Success(updated)
+    }
+
     override suspend fun pullBackup(): Result<DriveBackupArtifact> = withContext(Dispatchers.IO) {
         Log.d("DriveSync", "pullBackup: start")
         val account = requireSignedInAccount() ?: run {
@@ -231,8 +259,10 @@ class GoogleDriveBackupSyncManager @Inject constructor(
         }
         Log.d("DriveSync", "pullBackup: downloaded ${target.length()} bytes to ${target.absolutePath}")
 
+        val pulledAt = System.currentTimeMillis()
+        preferencesRepository.setDriveLastPullAt(pulledAt)
         _syncStatus.value = _syncStatus.value.copy(
-            lastPullAtMs = System.currentTimeMillis(),
+            lastPullAtMs = pulledAt,
             lastErrorMessage = null,
         )
         Result.Success(

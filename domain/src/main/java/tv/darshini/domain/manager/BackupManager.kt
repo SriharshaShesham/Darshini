@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import tv.darshini.domain.model.Result
 
 data class BackupData(
-    val version: Int = 7,
+    val version: Int = 8,
     val checksum: String? = null,
     val preferences: Map<String, String>? = null,
     val providers: List<Provider>? = null,

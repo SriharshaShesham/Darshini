@@ -119,6 +119,13 @@ class StreamVaultApp : Application(), SingletonImageLoader.Factory {
                 }
             }
         }
+        applicationScope.launch {
+            // Push-only Drive sync; MANUAL cancels the periodic work outright.
+            tv.darshini.data.sync.DriveBackupWorker.enqueuePeriodic(
+                this@StreamVaultApp,
+                preferencesRepository.driveSyncCadence.first()
+            )
+        }
         XtreamIndexWorker.enqueuePeriodic(this)
         XtreamIndexWorker.enqueueLaunchStaleCheck(this)
         RecordingReconcileWorker.enqueuePeriodic(this)

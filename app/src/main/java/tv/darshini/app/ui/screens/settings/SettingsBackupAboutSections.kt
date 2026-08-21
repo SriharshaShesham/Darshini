@@ -27,6 +27,7 @@ import tv.darshini.app.ui.theme.OnSurfaceDim
 import tv.darshini.app.ui.theme.Primary
 import tv.darshini.app.ui.theme.Secondary
 import tv.darshini.domain.manager.DriveAuthState
+import tv.darshini.domain.model.DriveSyncCadence
 
 internal fun LazyListScope.settingsBackupSection(
     onCreateBackup: () -> Unit,
@@ -101,7 +102,8 @@ internal fun LazyListScope.settingsDriveBackupSection(
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
     onPush: () -> Unit,
-    onPull: () -> Unit
+    onPull: () -> Unit,
+    onCadenceChange: (DriveSyncCadence) -> Unit
 ) {
     item(key = "settings_drive_section") {
         Column(
@@ -154,10 +156,61 @@ internal fun LazyListScope.settingsDriveBackupSection(
                             modifier = Modifier.weight(1f)
                         )
                     }
+                    DriveSyncCadenceRow(
+                        cadence = uiState.driveSyncCadence,
+                        onCadenceChange = onCadenceChange
+                    )
                 }
             }
         }
     }
+}
+
+@androidx.compose.runtime.Composable
+private fun DriveSyncCadenceRow(
+    cadence: DriveSyncCadence,
+    onCadenceChange: (DriveSyncCadence) -> Unit
+) {
+    val showDialog = androidx.compose.runtime.saveable.rememberSaveable {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
+    ClickableSettingsRow(
+        label = stringResource(R.string.settings_drive_cadence_label),
+        value = stringResource(driveSyncCadenceLabelRes(cadence)),
+        onClick = { showDialog.value = true }
+    )
+    Text(
+        text = stringResource(R.string.settings_drive_cadence_description),
+        style = MaterialTheme.typography.bodySmall,
+        color = OnSurfaceDim,
+        modifier = Modifier.padding(start = 12.dp, top = 6.dp, end = 12.dp)
+    )
+    if (showDialog.value) {
+        PremiumSelectionDialog(
+            title = stringResource(R.string.settings_drive_cadence_label),
+            onDismiss = { showDialog.value = false }
+        ) {
+            DriveSyncCadence.entries.forEach { option ->
+                LevelOption(
+                    level = option.ordinal,
+                    text = stringResource(driveSyncCadenceLabelRes(option)),
+                    currentLevel = cadence.ordinal,
+                    onSelect = {
+                        onCadenceChange(option)
+                        showDialog.value = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+private fun driveSyncCadenceLabelRes(cadence: DriveSyncCadence): Int = when (cadence) {
+    DriveSyncCadence.EVERY_6_HOURS -> R.string.settings_drive_cadence_6_hours
+    DriveSyncCadence.EVERY_12_HOURS -> R.string.settings_drive_cadence_12_hours
+    DriveSyncCadence.EVERY_1_DAY -> R.string.settings_drive_cadence_daily
+    DriveSyncCadence.EVERY_7_DAYS -> R.string.settings_drive_cadence_weekly
+    DriveSyncCadence.MANUAL -> R.string.settings_drive_cadence_manual
 }
 
 @androidx.compose.runtime.Composable

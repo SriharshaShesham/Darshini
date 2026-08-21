@@ -49,6 +49,16 @@ interface DriveBackupSyncManager {
     suspend fun pushBackup(): Result<DriveSyncStatus>
 
     /**
+     * [pushBackup] followed by [pushCredentials] — the complete upload, which is what every caller
+     * actually wants. Shared by the Settings "Back up now" action and the scheduled worker so the
+     * two cannot drift apart.
+     *
+     * Refuses to upload when no providers are configured: a wiped or half-set-up device must never
+     * overwrite a good remote backup.
+     */
+    suspend fun pushAll(): Result<DriveSyncStatus>
+
+    /**
      * Downloads the latest backup from Drive `appDataFolder` to a temporary
      * local file, then hands the URI back to the caller — typically wired into
      * the existing [BackupManager.inspectBackup] flow so the preview + conflict

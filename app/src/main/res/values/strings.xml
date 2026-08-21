@@ -1721,6 +1721,13 @@
     <string name="settings_drive_push_subtitle">Upload the current configuration to your Drive backup.</string>
     <string name="settings_drive_pull">Restore from Drive</string>
     <string name="settings_drive_pull_subtitle">Download the latest Drive backup and preview the import.</string>
+    <string name="settings_drive_cadence_label">Automatic backup</string>
+    <string name="settings_drive_cadence_description">How often this device uploads its backup to Drive. Restoring always stays manual, so a scheduled sync can never overwrite what is on this device.</string>
+    <string name="settings_drive_cadence_6_hours">Every 6 hours</string>
+    <string name="settings_drive_cadence_12_hours">Every 12 hours</string>
+    <string name="settings_drive_cadence_daily">Every day</string>
+    <string name="settings_drive_cadence_weekly">Every week</string>
+    <string name="settings_drive_cadence_manual">Manual only</string>
     <string name="settings_drive_last_push">Pushed: %1$s</string>
     <string name="settings_drive_last_pull">Pulled: %1$s</string>
     <string name="settings_drive_never_synced">Never synced yet</string>

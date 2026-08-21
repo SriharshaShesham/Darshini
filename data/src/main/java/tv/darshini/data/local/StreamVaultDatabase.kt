@@ -50,7 +50,7 @@ import tv.darshini.data.local.entity.*
         XtreamLiveOnboardingStateEntity::class,
         DownloadEntity::class
     ],
-    version = 62,
+    version = 63,
     exportSchema = true   // ← was false; schema JSON now tracked in version control
 )
 @TypeConverters(RoomEnumConverters::class)
@@ -67,6 +67,7 @@ abstract class StreamVaultDatabase : RoomDatabase() {
     abstract fun favoriteDao(): FavoriteDao
     abstract fun virtualGroupDao(): VirtualGroupDao
     abstract fun playbackHistoryDao(): PlaybackHistoryDao
+    abstract fun contentBindingDao(): ContentBindingDao
     abstract fun tmdbIdentityDao(): TmdbIdentityDao
     abstract fun searchHistoryDao(): SearchHistoryDao
     abstract fun searchDao(): SearchDao
@@ -2687,6 +2688,18 @@ abstract class StreamVaultDatabase : RoomDatabase() {
         val MIGRATION_61_62 = object : Migration(61, 62) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE categories ADD COLUMN is_partial_sync INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /**
+         * Adds the provider-side content key used to keep favourites and watch progress bound
+         * across reinstalls. Left at 0 here on purpose — ContentBindingDao.rebind() backfills it
+         * on the next sync (and always before a backup export), so no table scan at upgrade time.
+         */
+        val MIGRATION_62_63 = object : Migration(62, 63) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                addColumnIfMissing(database, "favorites", "source_id", "INTEGER NOT NULL DEFAULT 0")
+                addColumnIfMissing(database, "playback_history", "source_id", "INTEGER NOT NULL DEFAULT 0")
             }
         }
 
