@@ -18,10 +18,12 @@ class PlaybackStallRecoveryPolicyTest {
     }
 
     @Test
-    fun `frame silent ready stalls are recovered for live streams`() {
+    fun `frame silent ready stalls are recovered for every stream type`() {
+        // Progressive VOD was added: a hardware decoder can freeze (video frames stop while the
+        // audio clock keeps advancing) and only escalating recovery unfreezes it.
         assertThat(shouldRecoverFrameSilentReadyStalls(ResolvedStreamType.MPEG_TS_LIVE)).isTrue()
         assertThat(shouldRecoverFrameSilentReadyStalls(ResolvedStreamType.HLS)).isTrue()
-        assertThat(shouldRecoverFrameSilentReadyStalls(ResolvedStreamType.PROGRESSIVE)).isFalse()
+        assertThat(shouldRecoverFrameSilentReadyStalls(ResolvedStreamType.PROGRESSIVE)).isTrue()
     }
 
     @Test

@@ -39,7 +39,7 @@ private val TS_SUBTITLE_FORMATS: List<Format> = listOf(
 // Live streams here are a continuous raw MPEG-TS feed (…/live/…/<id>.ts), NOT HLS segments.
 // TsExtractor.MODE_HLS requires an HLS-supplied timestamp adjuster and throws IllegalStateException
 // when driven by a ProgressiveMediaSource, breaking every live channel. Leave the extractor at its
-// default MODE_MULTI_PMT — the same config the generic branch below already uses successfully.
+// default MODE_SINGLE_PMT — the same config the generic branch below already uses successfully.
 internal fun liveMpegTsExtractorsFactory(): DefaultExtractorsFactory =
     DefaultExtractorsFactory()
         .setTsExtractorFlags(

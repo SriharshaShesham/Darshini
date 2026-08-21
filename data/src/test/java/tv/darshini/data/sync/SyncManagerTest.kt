@@ -54,6 +54,8 @@ import tv.darshini.data.remote.jellyfin.JellyfinProvider
 import tv.darshini.data.preferences.PreferencesRepository
 import tv.darshini.domain.model.ContentType
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
@@ -374,6 +376,7 @@ class SyncManagerTest {
         credentialCrypto = credentialCrypto,
         syncMetadataRepository = syncMetadataRepo,
         transactionRunner = transactionRunner,
+        contentBindingDao = mock(),
         preferencesRepository = preferencesRepo,
         syncProgressBus = SyncProgressBus()
     )
@@ -1270,7 +1273,7 @@ class SyncManagerTest {
     }
 
     @Test
-    fun `processQueuedXtreamIndexJobs streams full movie index before category fallback`() = runTest {
+    fun `processQueuedXtreamIndexJobs indexes movie catalog via category slices`() = runTest {
         val mgr = buildManager(providerType = ProviderType.XTREAM_CODES)
         org.mockito.kotlin.whenever(
             categoryDao.getByProviderAndTypeSync(1L, ContentType.MOVIE.name)
@@ -1303,13 +1306,19 @@ class SyncManagerTest {
             """.trimIndent()
         )
 
-        val result = mgr.processQueuedXtreamIndexJobs(
-            providerId = 1L,
-            section = ContentType.MOVIE,
-            maxCategoriesPerSection = 2
-        )
+        // Off the test scheduler on purpose: the index pipeline wraps each provider request in
+        // withTimeout(60s), and runTest's virtual clock burns that budget the instant the request
+        // suspends, so every fetch reports a timeout. Real dispatcher, real (instant) fake backend.
+        val result = withContext(Dispatchers.Default) {
+            mgr.processQueuedXtreamIndexJobs(
+                providerId = 1L,
+                section = ContentType.MOVIE,
+                maxCategoriesPerSection = 2
+            )
+        }
         advanceUntilIdle()
 
+        if (result is Result.Error) fail(result.exception?.stackTraceToString() ?: result.message)
         assertThat(result.isSuccess).isTrue()
         assertThat(xtreamBackend.requestedActions).contains("get_vod_streams")
         verify(movieDao, atLeastOnce()).insertAll(any())
@@ -1414,11 +1423,16 @@ class SyncManagerTest {
             )
         )
 
-        val result = manager.processQueuedStalkerIndexJobs(
-            providerId = 1L,
-            section = ContentType.MOVIE,
-            maxCategoriesPerSection = 1
-        )
+        // Off the test scheduler on purpose: the index pipeline wraps each provider request in
+        // withTimeout(60s), and runTest's virtual clock burns that budget the instant the request
+        // suspends, so every fetch reports a timeout. Real dispatcher, real (instant) fake backend.
+        val result = withContext(Dispatchers.Default) {
+            manager.processQueuedStalkerIndexJobs(
+                providerId = 1L,
+                section = ContentType.MOVIE,
+                maxCategoriesPerSection = 1
+            )
+        }
 
         if (result is Result.Error) fail(result.exception?.stackTraceToString() ?: result.message)
         assertThat(result.isSuccess).isTrue()
@@ -1507,11 +1521,16 @@ class SyncManagerTest {
             )
         }
 
-        val result = manager.processQueuedStalkerIndexJobs(
-            providerId = 1L,
-            section = ContentType.MOVIE,
-            maxCategoriesPerSection = 1
-        )
+        // Off the test scheduler on purpose: the index pipeline wraps each provider request in
+        // withTimeout(60s), and runTest's virtual clock burns that budget the instant the request
+        // suspends, so every fetch reports a timeout. Real dispatcher, real (instant) fake backend.
+        val result = withContext(Dispatchers.Default) {
+            manager.processQueuedStalkerIndexJobs(
+                providerId = 1L,
+                section = ContentType.MOVIE,
+                maxCategoriesPerSection = 1
+            )
+        }
 
         if (result is Result.Error) fail(result.exception?.stackTraceToString() ?: result.message)
         assertThat(result.isSuccess).isTrue()
