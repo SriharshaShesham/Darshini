@@ -141,7 +141,14 @@ class ProviderSetupViewModel @Inject constructor(
     fun completeDriveSignIn(intentData: android.content.Intent?) {
         viewModelScope.launch {
             when (val signIn = driveBackupSyncManager.completeSignIn(intentData)) {
-                is DomainResult.Success -> Unit
+                is DomainResult.Success -> {
+                    // Fresh install: nothing to lose, so go straight for the backup instead of
+                    // making the user find a second button. The preview dialog still confirms,
+                    // and a device that already has providers is never touched automatically.
+                    if (providerRepository.getProviders().first().isEmpty()) {
+                        importBackupFromDrive()
+                    }
+                }
                 is DomainResult.Error -> {
                     _uiState.update {
                         it.copy(error = "Drive sign-in failed: ${signIn.message}")

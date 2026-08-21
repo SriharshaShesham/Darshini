@@ -113,6 +113,8 @@ data class SettingsUiState(
     // --- Drive sync (M2) ---
     val driveAuthState: DriveAuthState = DriveAuthState.SignedOut,
     val driveSyncStatus: DriveSyncStatus = DriveSyncStatus(),
+    val driveSyncCadence: tv.darshini.domain.model.DriveSyncCadence =
+        tv.darshini.domain.model.DriveSyncCadence.DEFAULT,
     val driveLastPushAt: Long? = null,
     val driveLastPullAt: Long? = null,
     val drivePendingSignIn: DriveSignInRequest? = null,

@@ -155,6 +155,7 @@ class SettingsViewModel @Inject constructor(
         driveManager = driveBackupSyncManager,
         importBackup = importBackup,
         providerRepository = providerRepository,
+        preferencesRepository = preferencesRepository,
         uiState = _uiState
     )
     private val recordingActions = SettingsRecordingActions(
@@ -1256,6 +1257,15 @@ class SettingsViewModel @Inject constructor(
 
     fun pullFromDrive() {
         driveBackupActions.pullBackup(viewModelScope)
+    }
+
+    fun setDriveSyncCadence(cadence: tv.darshini.domain.model.DriveSyncCadence) {
+        viewModelScope.launch {
+            preferencesRepository.setDriveSyncCadence(cadence)
+            // Re-schedule immediately; waiting for the next cold start would silently ignore
+            // the change the user just made.
+            tv.darshini.data.sync.DriveBackupWorker.enqueuePeriodic(appContext, cadence)
+        }
     }
 
     fun stopRecording(recordingId: String) {

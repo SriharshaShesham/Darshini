@@ -14,6 +14,7 @@ import tv.darshini.domain.usecase.InspectBackupResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -30,6 +31,7 @@ internal class SettingsDriveBackupActions(
     private val driveManager: DriveBackupSyncManager,
     private val importBackup: ImportBackup,
     private val providerRepository: ProviderRepository,
+    private val preferencesRepository: tv.darshini.data.preferences.PreferencesRepository,
     private val uiState: MutableStateFlow<SettingsUiState>
 ) {
 
@@ -53,6 +55,31 @@ internal class SettingsDriveBackupActions(
                     )
                 }
             }
+        }
+        scope.launch {
+            preferencesRepository.driveSyncCadence.collect { cadence ->
+                uiState.update { it.copy(driveSyncCadence = cadence) }
+            }
+        }
+        // Seed from the persisted timestamps so "Last synced" is right after a cold start —
+        // driveManager.syncStatus only knows about syncs performed in this process.
+        scope.launch {
+            combine(
+                preferencesRepository.driveLastPushAt,
+                preferencesRepository.driveLastPullAt
+            ) { pushAt, pullAt -> pushAt to pullAt }
+                .collect { (pushAt, pullAt) ->
+                    uiState.update { state ->
+                        state.copy(
+                            driveSyncStatus = state.driveSyncStatus.copy(
+                                lastPushAtMs = state.driveSyncStatus.lastPushAtMs ?: pushAt,
+                                lastPullAtMs = state.driveSyncStatus.lastPullAtMs ?: pullAt
+                            ),
+                            driveLastPushAt = state.driveLastPushAt ?: pushAt,
+                            driveLastPullAt = state.driveLastPullAt ?: pullAt
+                        )
+                    }
+                }
         }
     }
 
@@ -147,30 +174,18 @@ internal class SettingsDriveBackupActions(
                 return@launch
             }
             uiState.update { it.copy(driveIsBusy = true) }
-            val backupResult = driveManager.pushBackup()
-            if (backupResult is Result.Error) {
-                uiState.update {
-                    it.copy(
-                        driveIsBusy = false,
-                        userMessage = "Drive push failed: ${backupResult.message}"
-                    )
-                }
-                return@launch
-            }
-            // Chain credentials push (M3). The repository handles decryption
-            // internally so the cleartext never crosses the data layer except
-            // via the typed ProviderCredentials payload returned here.
-            val credentials = providerRepository.getAllProviderCredentials()
-            val credsResult = driveManager.pushCredentials(credentials)
+            // Same path the scheduled worker takes — backup then credentials, with the
+            // "no providers configured" guard so a wiped device cannot clobber the remote copy.
+            val result = driveManager.pushAll()
             uiState.update { state ->
-                when (credsResult) {
+                when (result) {
                     is Result.Success -> state.copy(
                         driveIsBusy = false,
                         userMessage = "Backup uploaded to Google Drive"
                     )
                     is Result.Error -> state.copy(
                         driveIsBusy = false,
-                        userMessage = "Backup uploaded but credentials failed: ${credsResult.message}"
+                        userMessage = "Drive push failed: ${result.message}"
                     )
                     is Result.Loading -> state.copy(driveIsBusy = false)
                 }

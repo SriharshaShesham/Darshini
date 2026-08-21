@@ -3156,14 +3156,26 @@ abstract class FavoriteDao {
     @Query("DELETE FROM favorites WHERE provider_id = :providerId AND content_id = :contentId AND content_type = :contentType AND (:groupId IS NULL AND group_id IS NULL OR group_id = :groupId)")
     abstract suspend fun delete(providerId: Long, contentId: Long, contentType: String, groupId: Long?)
 
-    @Query("DELETE FROM favorites WHERE content_type = 'LIVE' AND content_id NOT IN (SELECT id FROM channels)")
+    // content_id < 0 parks a restored favourite whose catalog has not been synced yet
+    // (see ContentBindingDao) — those are pending, not stale, so the sweeps must skip them.
+    @Query("DELETE FROM favorites WHERE content_type = 'LIVE' AND content_id > 0 AND content_id NOT IN (SELECT id FROM channels)")
     abstract suspend fun deleteMissingLiveFavorites(): Int
 
-    @Query("DELETE FROM favorites WHERE content_type = 'MOVIE' AND content_id NOT IN (SELECT id FROM movies)")
+    @Query("DELETE FROM favorites WHERE content_type = 'MOVIE' AND content_id > 0 AND content_id NOT IN (SELECT id FROM movies)")
     abstract suspend fun deleteMissingMovieFavorites(): Int
 
-    @Query("DELETE FROM favorites WHERE content_type = 'SERIES' AND content_id NOT IN (SELECT id FROM series)")
+    @Query("DELETE FROM favorites WHERE content_type = 'SERIES' AND content_id > 0 AND content_id NOT IN (SELECT id FROM series)")
     abstract suspend fun deleteMissingSeriesFavorites(): Int
+
+    @Query(
+        """
+        SELECT * FROM favorites
+        WHERE provider_id = :providerId AND source_id = :sourceId AND content_type = :contentType
+          AND (:groupId IS NULL AND group_id IS NULL OR group_id = :groupId)
+        LIMIT 1
+        """
+    )
+    abstract suspend fun getBySource(providerId: Long, sourceId: Long, contentType: String, groupId: Long?): FavoriteEntity?
 
     @Query("SELECT * FROM favorites WHERE id = :favoriteId LIMIT 1")
     protected abstract suspend fun getById(favoriteId: Long): FavoriteEntity?
@@ -3367,6 +3379,9 @@ interface PlaybackHistoryDao {
 
     @Query("DELETE FROM playback_history WHERE provider_id = :providerId AND content_type = :contentType")
     suspend fun deleteByProviderAndType(providerId: Long, contentType: String)
+
+    @Query("SELECT * FROM playback_history WHERE provider_id = :providerId AND source_id = :sourceId AND content_type = :contentType LIMIT 1")
+    suspend fun getBySource(providerId: Long, sourceId: Long, contentType: String): PlaybackHistoryEntity?
 }
 
 @Dao

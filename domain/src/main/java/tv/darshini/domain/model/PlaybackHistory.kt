@@ -3,6 +3,8 @@ package tv.darshini.domain.model
 data class PlaybackHistory(
     val id: Long = 0,
     val contentId: Long,
+    /** Provider-side stable id; 0 when not resolved yet. Backups bind through this, not [contentId]. */
+    val sourceId: Long = 0,
     val contentType: ContentType,
     val providerId: Long,
     val title: String,

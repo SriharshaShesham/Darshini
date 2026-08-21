@@ -102,7 +102,8 @@ object DatabaseModule {
                 StreamVaultDatabase.MIGRATION_58_59,
                 StreamVaultDatabase.MIGRATION_59_60,
                 StreamVaultDatabase.MIGRATION_60_61,
-                StreamVaultDatabase.MIGRATION_61_62
+                StreamVaultDatabase.MIGRATION_61_62,
+                StreamVaultDatabase.MIGRATION_62_63
             )
             // NOTE: fallbackToDestructiveMigration() intentionally removed.
             // All future schema changes MUST add a corresponding Migration in StreamVaultDatabase.
@@ -122,6 +123,7 @@ object DatabaseModule {
     @Provides fun provideProgramDao(db: StreamVaultDatabase): ProgramDao = db.programDao()
     @Provides fun provideFavoriteDao(db: StreamVaultDatabase): FavoriteDao = db.favoriteDao()
     @Provides fun provideVirtualGroupDao(db: StreamVaultDatabase): VirtualGroupDao = db.virtualGroupDao()
+    @Provides fun provideContentBindingDao(db: StreamVaultDatabase): ContentBindingDao = db.contentBindingDao()
     @Provides fun providePlaybackHistoryDao(db: StreamVaultDatabase): PlaybackHistoryDao = db.playbackHistoryDao()
     @Provides fun provideTmdbIdentityDao(db: StreamVaultDatabase): TmdbIdentityDao = db.tmdbIdentityDao()
     @Provides fun provideSearchHistoryDao(db: StreamVaultDatabase): SearchHistoryDao = db.searchHistoryDao()
