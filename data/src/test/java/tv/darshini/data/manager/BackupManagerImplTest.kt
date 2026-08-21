@@ -7,6 +7,7 @@ import com.google.gson.Gson
 import com.google.common.truth.Truth.assertThat
 import tv.darshini.data.local.DatabaseTransactionRunner
 import tv.darshini.data.local.dao.EpisodeDao
+import tv.darshini.data.local.dao.ContentBindingDao
 import tv.darshini.data.local.dao.FavoriteDao
 import tv.darshini.data.local.dao.MovieDao
 import tv.darshini.data.local.dao.PlaybackHistoryDao
@@ -146,6 +147,7 @@ class BackupManagerImplTest {
             favoriteDao = mock<FavoriteDao>(),
             virtualGroupDao = mock<VirtualGroupDao>(),
             playbackHistoryDao = playbackHistoryDao,
+            contentBindingDao = mock<ContentBindingDao>(),
             movieDao = movieDao,
             episodeDao = episodeDao,
             categoryRepository = mock<CategoryRepository>(),
@@ -270,6 +272,7 @@ class BackupManagerImplTest {
             favoriteDao = favoriteDao,
             virtualGroupDao = mock<VirtualGroupDao>(),
             playbackHistoryDao = playbackHistoryDao,
+            contentBindingDao = mock<ContentBindingDao>(),
             movieDao = movieDao,
             episodeDao = episodeDao,
             categoryRepository = mock<CategoryRepository>(),
@@ -354,6 +357,7 @@ class BackupManagerImplTest {
             favoriteDao = favoriteDao,
             virtualGroupDao = mock<VirtualGroupDao>(),
             playbackHistoryDao = mock<PlaybackHistoryDao>(),
+            contentBindingDao = mock<ContentBindingDao>(),
             movieDao = mock<MovieDao>(),
             episodeDao = mock<EpisodeDao>(),
             categoryRepository = mock<CategoryRepository>(),
@@ -392,6 +396,8 @@ class BackupManagerImplTest {
         val preferencesRepository: PreferencesRepository = mock()
         val gson = Gson()
         val backupData = BackupData(
+            // v7 = the hand-enumerated preference map; v8+ goes through importAllPreferences
+            version = 7,
             preferences = mapOf(
                 "playerAudioVideoSyncEnabled" to "true",
                 "playerAudioVideoOffsetMs" to "150"
@@ -410,6 +416,7 @@ class BackupManagerImplTest {
             favoriteDao = mock<FavoriteDao>(),
             virtualGroupDao = mock<VirtualGroupDao>(),
             playbackHistoryDao = mock<PlaybackHistoryDao>(),
+            contentBindingDao = mock<ContentBindingDao>(),
             movieDao = mock<MovieDao>(),
             episodeDao = mock<EpisodeDao>(),
             categoryRepository = mock<CategoryRepository>(),
@@ -449,6 +456,8 @@ class BackupManagerImplTest {
         val preferencesRepository: PreferencesRepository = mock()
         val gson = Gson()
         val backupData = BackupData(
+            // v7 = the hand-enumerated preference map; v8+ goes through importAllPreferences
+            version = 7,
             preferences = mapOf(
                 "appTopLevelDestinations" to "home,search,settings"
             )
@@ -466,6 +475,7 @@ class BackupManagerImplTest {
             favoriteDao = mock<FavoriteDao>(),
             virtualGroupDao = mock<VirtualGroupDao>(),
             playbackHistoryDao = mock<PlaybackHistoryDao>(),
+            contentBindingDao = mock<ContentBindingDao>(),
             movieDao = mock<MovieDao>(),
             episodeDao = mock<EpisodeDao>(),
             categoryRepository = mock<CategoryRepository>(),
@@ -509,6 +519,8 @@ class BackupManagerImplTest {
         whenever(context.contentResolver).thenReturn(contentResolver)
         val gson = Gson()
         val backupData = BackupData(
+            // v7 = the hand-enumerated preference map; v8+ goes through importAllPreferences
+            version = 7,
             preferences = mapOf(
                 "appHomeDashboardShelves" to "favorite_channels,recommended_movies,top_rated_movies"
             )
@@ -526,6 +538,7 @@ class BackupManagerImplTest {
             favoriteDao = mock<FavoriteDao>(),
             virtualGroupDao = mock<VirtualGroupDao>(),
             playbackHistoryDao = mock<PlaybackHistoryDao>(),
+            contentBindingDao = mock<ContentBindingDao>(),
             movieDao = mock<MovieDao>(),
             episodeDao = mock<EpisodeDao>(),
             categoryRepository = mock<CategoryRepository>(),
@@ -874,6 +887,7 @@ class BackupManagerImplTest {
         favoriteDao = mock<FavoriteDao>(),
         virtualGroupDao = mock<VirtualGroupDao>(),
         playbackHistoryDao = mock<PlaybackHistoryDao>(),
+        contentBindingDao = mock<ContentBindingDao>(),
         movieDao = mock<MovieDao>(),
         episodeDao = mock<EpisodeDao>(),
         categoryRepository = mock<CategoryRepository>(),
