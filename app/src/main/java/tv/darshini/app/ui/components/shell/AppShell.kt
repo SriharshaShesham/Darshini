@@ -8,6 +8,9 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +65,13 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.MaterialTheme
@@ -1154,16 +1164,21 @@ private fun RailButton(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+    val tooltipGapPx = with(LocalDensity.current) { 8.dp.roundToPx() }
     val scale by animateFloatAsState(
         targetValue = if (isFocused) FocusSpec.FocusedScale else 1f,
         animationSpec = AppMotion.FocusSpec,
         label = "railButtonScale"
     )
 
+    Box(modifier = Modifier.fillMaxWidth()) {
     TvClickableSurface(
         onClick = onClick,
         modifier = modifier
             .focusRequester(focusRequester)
+            .hoverable(interactionSource)
             .mouseClickable(
                 focusRequester = focusRequester,
                 onClick = onClick
@@ -1219,6 +1234,36 @@ private fun RailButton(
             }
         }
     }
+        if (!isExpanded && (isFocused || isHovered)) {
+            Popup(popupPositionProvider = remember(tooltipGapPx) { RailTooltipPosition(tooltipGapPx) }) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    colors = SurfaceDefaults.colors(containerColor = AppColors.SurfaceEmphasis)
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = AppColors.TextPrimary,
+                        maxLines = 1,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Places the collapsed-rail tooltip just to the right of the rail button, vertically centred. */
+private class RailTooltipPosition(private val gapPx: Int) : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize
+    ): IntOffset = IntOffset(
+        x = anchorBounds.right + gapPx,
+        y = anchorBounds.top + (anchorBounds.height - popupContentSize.height) / 2
+    )
 }
 
 private data class DestinationItem(
