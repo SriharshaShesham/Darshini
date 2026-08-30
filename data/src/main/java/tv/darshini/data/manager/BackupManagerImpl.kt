@@ -937,7 +937,11 @@ class BackupManagerImpl @Inject constructor(
             playbackHistoryDao.insertOrUpdate(
                 item.copy(
                     providerId = resolvedProviderId,
-                    contentId = item.parkedContentId()
+                    contentId = item.parkedContentId(),
+                    // seriesId is the source device's series row id, so it points at unrelated
+                    // content here and would let the row render a wrong tile. Cleared on import;
+                    // ContentBindingDao re-derives it once the row binds to a real episode.
+                    seriesId = null
                 ).toEntity()
             )
             providersToResync += resolvedProviderId
@@ -1131,17 +1135,22 @@ private fun ScheduledRecordingBackup.hasStableRecurringIdentity(): Boolean =
 /**
  * Where a restored row should sit until the catalog exists.
  *
- * `contentId` from the backup is the *source* device's row id — meaningless here. Parking at
- * `-sourceId` keeps the row unique against the table's unique index, keeps it invisible to the UI
- * and to the "content is missing" sweeps, and gives ContentBindingDao the key it needs to bind the
- * row once the catalog has been synced. Pre-v8 backups have no source id, so they keep the old
- * (best-effort) behaviour.
+ * `contentId` from the backup is the *source* device's row id and is meaningless here — on this
+ * device that id belongs to whatever content happens to occupy it. Every restored row is therefore
+ * parked at a negative id: unique against the table's unique index, invisible to the UI and to the
+ * "content is missing" sweeps, and — critically — excluded from ContentBindingDao's forward fill,
+ * which resolves `content_id` as a *local* row id and would otherwise bind the row to the wrong
+ * title.
+ *
+ * v8+ backups park at `-sourceId` and bind straight through the provider-side id. Pre-v8 backups
+ * have no source id, so they park at `-contentId` (still unique, since it was unique on the source
+ * device) and are bound later by title — see ContentBindingDao.
  */
 private fun tv.darshini.domain.model.Favorite.parkedContentId(): Long =
-    if (sourceId != 0L) -sourceId else contentId
+    if (sourceId != 0L) -sourceId else -contentId
 
 private fun tv.darshini.domain.model.PlaybackHistory.parkedContentId(): Long =
-    if (sourceId != 0L) -sourceId else contentId
+    if (sourceId != 0L) -sourceId else -contentId
 
 private fun tv.darshini.domain.model.Provider.toSecureEntityForBackup(
     credentialCrypto: CredentialCrypto
