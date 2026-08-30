@@ -174,9 +174,12 @@ class BackupManagerImplTest {
         assertThat(transactionRunner.calls).isEqualTo(1)
         verify(playbackHistoryDao).deleteByProvider(7L)
         verify(playbackHistoryDao, never()).deleteAll()
+        // Parked at -55, not 55: the backup's contentId is the *source* device's row id, and
+        // inserting it raw is what made Continue Watching open unrelated content.
         verify(playbackHistoryDao).insertOrUpdate(argThat {
             providerId == 7L &&
-                contentId == 55L &&
+                contentId == -55L &&
+                seriesId == null &&
                 contentType == ContentType.MOVIE
         })
         verify(movieDao).syncWatchProgressFromHistoryByProvider(7L)

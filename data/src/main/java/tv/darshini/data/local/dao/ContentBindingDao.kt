@@ -18,9 +18,11 @@ import androidx.room.Transaction
  *  - forward  — fills `source_id` for rows that have a resolvable `content_id` (new favourites)
  *  - backward — fills `content_id` from `source_id` (rows that arrived from a backup)
  *
- * Restored rows that cannot bind yet (catalog not synced) are parked at `content_id = -source_id`:
- * negative, so they stay unique against the table's unique indices, never collide with a real row,
- * and are skipped by the "content is missing" maintenance sweeps instead of being deleted.
+ * Restored rows are parked at a negative `content_id` (`-source_id`, or `-content_id` for pre-v8
+ * backups that carry no source id): unique against the table's unique indices, never colliding with
+ * a real row, skipped by the "content is missing" sweeps instead of being deleted, and — the point —
+ * excluded from the forward fill, which would otherwise read the source device's row id as a local
+ * one and bind the row to unrelated content.
  */
 @Dao
 abstract class ContentBindingDao {
@@ -67,7 +69,7 @@ abstract class ContentBindingDao {
     @Query(
         """
         DELETE FROM favorites
-        WHERE provider_id = :providerId AND content_id < 0
+        WHERE provider_id = :providerId AND content_id < 0 AND source_id != 0
           AND EXISTS (
               SELECT 1 FROM favorites other
               WHERE other.provider_id = favorites.provider_id
@@ -146,7 +148,7 @@ abstract class ContentBindingDao {
     @Query(
         """
         DELETE FROM playback_history
-        WHERE provider_id = :providerId AND content_id < 0
+        WHERE provider_id = :providerId AND content_id < 0 AND source_id != 0
           AND EXISTS (
               SELECT 1 FROM playback_history other
               WHERE other.provider_id = playback_history.provider_id
@@ -158,11 +160,153 @@ abstract class ContentBindingDao {
     )
     abstract suspend fun dropParkedHistoryDuplicates(providerId: Long)
 
+    /**
+     * Binds restored rows that carry no `source_id` (pre-v8 backups) by **title**.
+     *
+     * These rows have no provider-side id anywhere in the backup, and their `content_id` is the
+     * source device's row id, so resolving through it lands on unrelated content — that is the
+     * "Continue Watching opens a different series" bug. `title` is the only key the payload
+     * actually carries that means the same thing on both devices.
+     *
+     * Binds only when the title matches **exactly one** catalog row: two series sharing a name is
+     * precisely how a wrong tile comes back. Ambiguous rows stay parked and invisible.
+     *
+     * `series` is used rather than `episodes` on purpose — episodes hydrate on demand, so after a
+     * fresh restore the episode rows usually do not exist yet, while the series always does.
+     */
+    @Query(
+        """
+        UPDATE playback_history SET source_id = (
+            SELECT s.series_id FROM series s
+             WHERE s.provider_id = playback_history.provider_id AND s.name = playback_history.title
+        )
+        WHERE provider_id = :providerId AND source_id = 0 AND content_id < 0
+          AND content_type = 'SERIES' AND title != ''
+          AND (SELECT COUNT(*) FROM series s2
+                WHERE s2.provider_id = playback_history.provider_id
+                  AND s2.name = playback_history.title) = 1
+        """
+    )
+    abstract suspend fun bindHistorySeriesByTitle(providerId: Long)
+
+    @Query(
+        """
+        UPDATE playback_history SET source_id = (
+            SELECT m.stream_id FROM movies m
+             WHERE m.provider_id = playback_history.provider_id AND m.name = playback_history.title
+        )
+        WHERE provider_id = :providerId AND source_id = 0 AND content_id < 0
+          AND content_type = 'MOVIE' AND title != ''
+          AND (SELECT COUNT(*) FROM movies m2
+                WHERE m2.provider_id = playback_history.provider_id
+                  AND m2.name = playback_history.title) = 1
+        """
+    )
+    abstract suspend fun bindHistoryMovieByTitle(providerId: Long)
+
+    @Query(
+        """
+        UPDATE playback_history SET source_id = (
+            SELECT c.stream_id FROM channels c
+             WHERE c.provider_id = playback_history.provider_id AND c.name = playback_history.title
+        )
+        WHERE provider_id = :providerId AND source_id = 0 AND content_id < 0
+          AND content_type = 'LIVE' AND title != ''
+          AND (SELECT COUNT(*) FROM channels c2
+                WHERE c2.provider_id = playback_history.provider_id
+                  AND c2.name = playback_history.title) = 1
+        """
+    )
+    abstract suspend fun bindHistoryChannelByTitle(providerId: Long)
+
+    /**
+     * Episode rows: the stored `title` is the *series* name, so resolve the series by title and
+     * then pin the episode with the season/episode numbers the row already carries.
+     *
+     * Sets `series_id` even when the episode itself has not hydrated yet — that alone is enough for
+     * the tile to open the right series, and `content_id` binds on a later pass once the episodes
+     * arrive.
+     */
+    @Query(
+        """
+        UPDATE playback_history SET series_id = (
+            SELECT s.id FROM series s
+             WHERE s.provider_id = playback_history.provider_id AND s.name = playback_history.title
+        )
+        WHERE provider_id = :providerId AND source_id = 0 AND content_id < 0
+          AND content_type = 'SERIES_EPISODE' AND title != ''
+          AND (SELECT COUNT(*) FROM series s2
+                WHERE s2.provider_id = playback_history.provider_id
+                  AND s2.name = playback_history.title) = 1
+        """
+    )
+    abstract suspend fun bindHistoryEpisodeSeriesByTitle(providerId: Long)
+
+    @Query(
+        """
+        UPDATE playback_history SET source_id = (
+            SELECT e.episode_id FROM episodes e
+             WHERE e.provider_id = playback_history.provider_id
+               AND e.series_id = playback_history.series_id
+               AND e.season_number = playback_history.season_number
+               AND e.episode_number = playback_history.episode_number
+        )
+        WHERE provider_id = :providerId AND source_id = 0 AND content_id < 0
+          AND content_type = 'SERIES_EPISODE'
+          AND series_id IS NOT NULL AND season_number IS NOT NULL AND episode_number IS NOT NULL
+          AND (SELECT COUNT(*) FROM episodes e2
+                WHERE e2.provider_id = playback_history.provider_id
+                  AND e2.series_id = playback_history.series_id
+                  AND e2.season_number = playback_history.season_number
+                  AND e2.episode_number = playback_history.episode_number) = 1
+        """
+    )
+    abstract suspend fun bindHistoryEpisodeBySeasonEpisode(providerId: Long)
+
+    /**
+     * Tiebreaker for rows the title could not place — an exact `stream_url` match. Weaker than
+     * title because Xtream URLs embed the credentials, so a password change invalidates every
+     * stored URL, but it does resolve duplicate titles.
+     */
+    @Query(
+        """
+        UPDATE playback_history SET source_id = COALESCE(
+            (SELECT c.stream_id FROM channels c
+              WHERE c.stream_url = playback_history.stream_url
+                AND c.provider_id = playback_history.provider_id
+                AND playback_history.content_type = 'LIVE'),
+            (SELECT m.stream_id FROM movies m
+              WHERE m.stream_url = playback_history.stream_url
+                AND m.provider_id = playback_history.provider_id
+                AND playback_history.content_type = 'MOVIE'),
+            (SELECT e.episode_id FROM episodes e
+              WHERE e.stream_url = playback_history.stream_url
+                AND e.provider_id = playback_history.provider_id
+                AND playback_history.content_type = 'SERIES_EPISODE'),
+            source_id
+        )
+        WHERE provider_id = :providerId AND source_id = 0 AND content_id < 0
+          AND stream_url != ''
+        """
+    )
+    abstract suspend fun bindHistoryByStreamUrl(providerId: Long)
+
     @Transaction
     open suspend fun rebind(providerId: Long) {
         fillFavoriteSourceIds(providerId)
         fillFavoriteContentIds(providerId)
         dropParkedFavoriteDuplicates(providerId)
+
+        // Title/stream-url passes first: they give a parked pre-v8 row the source_id it never had,
+        // so the fills below have something real to bind through. Order matters for episodes —
+        // the series must resolve before the season/episode lookup can use it.
+        bindHistorySeriesByTitle(providerId)
+        bindHistoryMovieByTitle(providerId)
+        bindHistoryChannelByTitle(providerId)
+        bindHistoryEpisodeSeriesByTitle(providerId)
+        bindHistoryEpisodeBySeasonEpisode(providerId)
+        bindHistoryByStreamUrl(providerId)
+
         fillHistorySourceIds(providerId)
         fillHistoryContentIds(providerId)
         refreshHistorySeriesIds(providerId)
