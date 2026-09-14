@@ -1666,6 +1666,10 @@ class SeriesRepositoryImpl @Inject constructor(
         if (cacheState == CACHE_STATE_SUMMARY_ONLY) return false
         if (detailHydratedAt <= 0L) return false
         if (remoteStaleAt > 0L) return false
+        // Provider bumped last_modified (new episodes) after we cached the episode list. Xtream sends
+        // epoch seconds; ponytail: values already in millis are passed through by magnitude.
+        val lastModifiedMillis = if (lastModified in 1L until 100_000_000_000L) lastModified * 1000L else lastModified
+        if (lastModifiedMillis > detailHydratedAt) return false
         if (ContentCachePolicy.shouldRefresh(detailHydratedAt, DETAIL_REFRESH_TTL_MILLIS, now)) return false
         return true
     }
