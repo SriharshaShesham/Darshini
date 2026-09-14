@@ -21,6 +21,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import tv.darshini.app.ui.design.requestFocusWithRetries
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -189,6 +194,19 @@ private fun SeriesDetailContent(
             mutableStateOf(EPISODE_DETAIL_PAGE_SIZE)
         }
         val visibleEpisodes = selectedSeason?.episodes.orEmpty().take(visibleEpisodeLimit)
+        // Land D-pad focus on the episode to continue; without a target the TV focuses the sidebar.
+        val listState = rememberLazyListState()
+        val episodeFocusRequester = remember { FocusRequester() }
+        val focusEpisodeId = visibleEpisodes.firstOrNull { it.id == resumeEpisode?.id }?.id
+            ?: visibleEpisodes.firstOrNull()?.id
+        LaunchedEffect(series.id) {
+            val episodeIndex = visibleEpisodes.indexOfFirst { it.id == focusEpisodeId }
+            if (episodeIndex < 0) return@LaunchedEffect
+            // back button, header, seasons row (when present), episode-count title precede episodes
+            val headerItems = if (series.seasons.isNotEmpty()) 4 else 3
+            listState.scrollToItem(headerItems + episodeIndex)
+            episodeFocusRequester.requestFocusWithRetries(tag = "SeriesDetail", target = "Resume episode")
+        }
 
         AsyncImage(
             model = rememberCrossfadeImageModel(series.backdropUrl ?: series.posterUrl),
@@ -217,6 +235,7 @@ private fun SeriesDetailContent(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
+            state = listState,
             contentPadding = contentPadding,
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
@@ -457,6 +476,11 @@ private fun SeriesDetailContent(
                 items(visibleEpisodes, key = { it.id }) { episode ->
                     EpisodeItem(
                         episode = episode,
+                        modifier = if (episode.id == focusEpisodeId) {
+                            Modifier.focusRequester(episodeFocusRequester)
+                        } else {
+                            Modifier
+                        },
                         fallbackImageUrl = fallbackCover,
                         onClick = { onEpisodeClick(episode) },
                         onCopyUrl = { copyEpisodeUrl(episode) },
@@ -647,6 +671,7 @@ fun SeasonChip(
 @Composable
 fun EpisodeItem(
     episode: Episode,
+    modifier: Modifier = Modifier,
     fallbackImageUrl: String? = null,
     onClick: () -> Unit,
     onCopyUrl: () -> Unit,
@@ -664,7 +689,7 @@ fun EpisodeItem(
                 containerColor = AppColors.SurfaceElevated,
                 focusedContainerColor = AppColors.SurfaceEmphasis
             ),
-            modifier = Modifier.weight(1f)
+            modifier = modifier.weight(1f)
         ) {
             EpisodeRowCard(
                 episode = episode,

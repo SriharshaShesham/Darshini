@@ -97,7 +97,9 @@ class SeriesDetailViewModel @Inject constructor(
                     }
                     loadExternalRatings(result.data)
                     startUnwatchedCountCollection(providerId, result.data.id)
+                    val resumeEpisode = findResumeEpisode(result.data)
                     val selectedSeasonNumber = _uiState.value.selectedSeason?.seasonNumber
+                        ?: resumeEpisode?.seasonNumber
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -105,7 +107,7 @@ class SeriesDetailViewModel @Inject constructor(
                             selectedSeason = result.data.seasons.firstOrNull { season ->
                                 season.seasonNumber == selectedSeasonNumber
                             } ?: result.data.seasons.firstOrNull(),
-                            resumeEpisode = findResumeEpisode(result.data),
+                            resumeEpisode = resumeEpisode,
                             error = null
                         )
                     }
@@ -261,16 +263,14 @@ class SeriesDetailViewModel @Inject constructor(
         val ordered = series.seasons
             .sortedBy { it.seasonNumber }
             .flatMap { season -> season.episodes.sortedBy { it.episodeNumber } }
-        // Prefer the most-recently-watched in-progress episode
-        val inProgress = ordered
-            .filter { ep ->
-                ep.watchProgress > 5000L &&
-                    !isPlaybackComplete(ep.watchProgress, ep.durationSeconds.toLong() * 1000L)
-            }
-            .maxByOrNull { it.lastWatchedAt }
-        if (inProgress != null) return inProgress
-        // Fall back to the first episode that has never been started
-        return ordered.firstOrNull { ep -> ep.lastWatchedAt == 0L }
+        // Anchor on the most recently watched episode: resume it if unfinished, otherwise the one after
+        // it. "First never-started episode" sent a viewer who began at season 4 back to S1E1.
+        val lastWatched = ordered.filter { it.lastWatchedAt > 0L }.maxByOrNull { it.lastWatchedAt }
+            ?: return ordered.firstOrNull()
+        val unfinished = lastWatched.watchProgress > 5000L &&
+            !isPlaybackComplete(lastWatched.watchProgress, lastWatched.durationSeconds.toLong() * 1000L)
+        if (unfinished) return lastWatched
+        return ordered.getOrNull(ordered.indexOf(lastWatched) + 1) ?: lastWatched
     }
 }
 

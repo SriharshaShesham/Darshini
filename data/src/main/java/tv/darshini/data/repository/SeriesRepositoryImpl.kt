@@ -648,6 +648,8 @@ class SeriesRepositoryImpl @Inject constructor(
         Result.success(Unit) // Handled by ProviderRepository
 
     private suspend fun buildSeriesWithPersistedEpisodes(seriesEntity: SeriesEntity): Series {
+        // playback_history is the source of truth; heals episode rows whose watch state a refetch dropped.
+        episodeDao.restoreWatchProgress(seriesEntity.id)
         val episodes = episodeDao.getBySeriesSync(seriesEntity.id).map { it.toDomain() }
         val seasons = episodes.groupBy { it.seasonNumber }
             .entries
