@@ -2731,11 +2731,19 @@ interface EpisodeDao {
     @Query("DELETE FROM episodes WHERE series_id NOT IN (SELECT id FROM series)")
     suspend fun deleteOrphans(): Int
 
+    // last_watched_at must come back too: the series screen resumes from the most recently watched
+    // episode, and a refetch that restored only progress sent Continue Watching to S1E1.
     @Query("""
-        UPDATE episodes 
+        UPDATE episodes
         SET watch_progress = (
-            SELECT resume_position_ms FROM playback_history 
-            WHERE playback_history.content_id = episodes.id 
+            SELECT resume_position_ms FROM playback_history
+            WHERE playback_history.content_id = episodes.id
+            AND playback_history.content_type = 'SERIES_EPISODE'
+            AND playback_history.provider_id = episodes.provider_id
+        ),
+            last_watched_at = (
+            SELECT last_watched_at FROM playback_history
+            WHERE playback_history.content_id = episodes.id
             AND playback_history.content_type = 'SERIES_EPISODE'
             AND playback_history.provider_id = episodes.provider_id
         )
