@@ -144,14 +144,8 @@ class StreamVaultApp : Application(), SingletonImageLoader.Factory {
             return
         }
 
-        val lastCheckedAt = preferencesRepository.lastAppUpdateCheckTimestamp.first()
-        val now = System.currentTimeMillis()
-        val checkIntervalMs = 24L * 60L * 60L * 1000L
-        if (lastCheckedAt != null && now - lastCheckedAt < checkIntervalMs) {
-            return
-        }
-
-        preferencesRepository.setLastAppUpdateCheckTimestamp(now)
+        // Every launch: the startup update dialog reads this cache. One GitHub API call per cold start.
+        preferencesRepository.setLastAppUpdateCheckTimestamp(System.currentTimeMillis())
         when (val result = gitHubReleaseChecker.fetchLatestRelease()) {
             is Result.Success -> {
                 preferencesRepository.setCachedAppUpdateRelease(

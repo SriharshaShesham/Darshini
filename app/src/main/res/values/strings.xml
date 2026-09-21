@@ -678,6 +678,7 @@
     <string name="settings_update_status_downloading">Downloading update</string>
     <string name="settings_update_status_ready_to_install">Ready to install</string>
     <string name="settings_update_available_message">Darshini %1$s is available.</string>
+    <string name="app_update_remind_next_launch">Remind me next launch</string>
     <string name="settings_update_current_message">You already have the latest Darshini release.</string>
     <string name="settings_syncing">Syncing data, please wait...</string>
     <string name="settings_syncing_title">Syncing data...</string>
