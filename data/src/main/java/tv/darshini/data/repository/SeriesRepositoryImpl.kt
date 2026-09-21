@@ -83,6 +83,7 @@ class SeriesRepositoryImpl @Inject constructor(
         const val STALKER_PREVIEW_REQUIRED_COUNT_THRESHOLD = 24
         const val STALKER_PREVIEW_MAX_REMOTE_PAGES = 2
         const val DETAIL_REFRESH_TTL_MILLIS = 14L * 24L * 60L * 60L * 1000L
+        const val IN_PROGRESS_DETAIL_REFRESH_TTL_MILLIS = 6L * 60L * 60L * 1000L
         const val XTREAM_DETAIL_HYDRATION_TIMEOUT_MILLIS = 25_000L
         const val CACHE_STATE_SUMMARY_ONLY = "SUMMARY_ONLY"
         const val CACHE_STATE_DETAIL_HYDRATED = "DETAIL_HYDRATED"
@@ -390,9 +391,13 @@ class SeriesRepositoryImpl @Inject constructor(
         // Trust the "fresh details" short-circuit only if episodes actually survive. A series can
         // be marked DETAIL_HYDRATED yet have zero episodes (e.g. wiped by a prior REPLACE cascade);
         // in that case fall through and re-fetch instead of returning an empty, unplayable series.
+        // Many panels add episodes without bumping last_modified, so a series being watched can't wait
+        // out the 14-day TTL for the next episode; it gets the short in-progress TTL instead.
         if (provider.type == ProviderType.XTREAM_CODES &&
             seriesEntity.hasFreshXtreamDetails() &&
-            episodeDao.countBySeries(seriesEntity.id) > 0
+            episodeDao.countBySeries(seriesEntity.id) > 0 &&
+            !(episodeDao.hasWatchHistory(seriesEntity.id) &&
+                ContentCachePolicy.shouldRefresh(seriesEntity.detailHydratedAt, IN_PROGRESS_DETAIL_REFRESH_TTL_MILLIS))
         ) {
             return Result.success(attachSeriesPresentation(buildSeriesWithPersistedEpisodes(seriesEntity), knownPresentation))
         }

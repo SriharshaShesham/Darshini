@@ -2630,6 +2630,15 @@ interface EpisodeDao {
     @Query("SELECT COUNT(*) FROM episodes WHERE series_id = :seriesId")
     suspend fun countBySeries(seriesId: Long): Int
 
+    @Query("""
+        SELECT EXISTS(
+            SELECT 1 FROM playback_history
+            WHERE content_type = 'SERIES_EPISODE'
+              AND (series_id = :seriesId OR content_id IN (SELECT id FROM episodes WHERE series_id = :seriesId))
+        )
+    """)
+    suspend fun hasWatchHistory(seriesId: Long): Boolean
+
     @Query("SELECT * FROM episodes WHERE id = :id")
     suspend fun getById(id: Long): EpisodeEntity?
 
