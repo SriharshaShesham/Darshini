@@ -9,7 +9,6 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.provider.Settings
 import androidx.core.content.FileProvider
 import tv.darshini.app.BuildConfig
 import tv.darshini.data.preferences.PreferencesRepository
@@ -192,8 +191,8 @@ class AppUpdateInstaller @Inject constructor(
             }
 
             val request = DownloadManager.Request(Uri.parse(downloadUrl))
-                .setTitle("StreamVault ${releaseInfo.versionName}")
-                .setDescription("Downloading the latest StreamVault update")
+                .setTitle("Darshini ${releaseInfo.versionName}")
+                .setDescription("Downloading the latest Darshini update")
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 .setMimeType("application/vnd.android.package-archive")
                 .setAllowedOverMetered(true)
@@ -229,14 +228,10 @@ class AppUpdateInstaller @Inject constructor(
             return@withContext Result.error("No downloaded update is ready to install")
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
-            val settingsIntent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                data = Uri.parse("package:${context.packageName}")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(settingsIntent)
-            return@withContext Result.error("Allow installs from this app, then try Install update again")
-        }
+        // No canRequestPackageInstalls() pre-check: the system installer prompts for the
+        // unknown-sources permission itself and deep-links the right page. Our own
+        // ACTION_MANAGE_UNKNOWN_APP_SOURCES redirect opened another user profile's list on
+        // multi-profile TVs (Hisense), so granting it there never took effect and looped.
 
         val apkFile = apkFileForVersion(currentState.versionName)
         if (!apkFile.exists()) {
@@ -314,7 +309,7 @@ class AppUpdateInstaller @Inject constructor(
         val sanitizedVersion = versionName.replace(Regex("[^A-Za-z0-9._-]"), "_")
         val downloadsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
             ?: File(context.cacheDir, "downloads")
-        return File(downloadsDir, "StreamVault-$sanitizedVersion.apk")
+        return File(downloadsDir, "Darshini-$sanitizedVersion.apk")
     }
 
     private fun registerDownloadReceiver() {

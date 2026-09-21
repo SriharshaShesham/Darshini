@@ -24,6 +24,8 @@ import tv.darshini.app.navigation.PlayerNavigationRequest
 import tv.darshini.app.tv.LauncherRecommendationsManager
 import tv.darshini.app.tv.WatchNextManager
 import tv.darshini.app.tvinput.TvInputChannelSyncManager
+import tv.darshini.app.update.AppUpdateDialogHost
+import tv.darshini.app.update.AppUpdateInstaller
 import tv.darshini.app.ui.theme.StreamVaultTheme
 import tv.darshini.app.ui.time.LocalAppTimeFormat
 import tv.darshini.app.ui.components.shell.LocalUseSideNavigation
@@ -76,6 +78,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var preferencesRepository: PreferencesRepository
+
+    @Inject
+    lateinit var appUpdateInstaller: AppUpdateInstaller
 
     @Inject
     lateinit var watchNextManager: WatchNextManager
@@ -179,6 +184,10 @@ class MainActivity : ComponentActivity() {
             ) {
                 StreamVaultTheme(appTheme = appTheme) {
                     AppNavigation(mainActivity = this@MainActivity)
+                    AppUpdateDialogHost(
+                        preferencesRepository = preferencesRepository,
+                        appUpdateInstaller = appUpdateInstaller
+                    )
                 }
             }
         }
