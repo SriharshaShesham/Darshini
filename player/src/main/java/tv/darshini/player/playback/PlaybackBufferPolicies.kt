@@ -15,8 +15,9 @@ internal data class PlaybackBufferPolicy(
     val prioritizeTimeOverSizeThresholds: Boolean,
     val qualityReason: String = "baseline",
     val lowMemoryCapped: Boolean = false,
-    // Retained content behind the playhead so short rewinds replay from RAM instead of re-fetching.
-    // VOD only; live stays 0 (no back-seeking a live edge).
+    // Retained content behind the playhead. Kept at 0: back-buffer allocations count against
+    // targetBufferBytes, so on VOD (where the byte ceiling binds) a 30s back buffer of a high-bitrate
+    // stream ate most of the heap budget and left only seconds of forward buffer — constant stalls.
     val backBufferMs: Int = 0
 )
 
@@ -57,7 +58,6 @@ internal object PlaybackBufferPolicies {
     private const val REBUFFER_MS = 5_000
     private const val VOD_PLAYBACK_BUFFER_MS = 20_000
     private const val VOD_REBUFFER_MS = 30_000
-    private const val VOD_BACK_BUFFER_MS = 30_000
     private const val MEDIUM_LIVE_MIN_BUFFER_MS = 15_000
     private const val MEDIUM_LIVE_MAX_BUFFER_MS = 45_000
     private const val MEDIUM_LIVE_PLAYBACK_BUFFER_MS = 3_000
@@ -250,8 +250,7 @@ internal object PlaybackBufferPolicies {
                 rebufferMs = VOD_REBUFFER_MS,
                 targetBufferBytes = vodTargetBufferBytes(),
                 // See lowmem-vod: byte ceiling must bind or a high-bitrate remux exhausts the heap.
-                prioritizeTimeOverSizeThresholds = false,
-                backBufferMs = VOD_BACK_BUFFER_MS
+                prioritizeTimeOverSizeThresholds = false
             )
     }
 
