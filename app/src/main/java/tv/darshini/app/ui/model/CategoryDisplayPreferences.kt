@@ -22,8 +22,9 @@ fun applyProviderCategoryDisplayPreferences(
         )
         CategorySortMode.CUSTOM -> {
             visible.sortedBy { category ->
+                // Stored entries are trimmed; provider names often carry stray padding.
                 val index = priorityKeywords.indexOfFirst { keyword ->
-                    keyword.equals(category.name, ignoreCase = true)
+                    keyword.equals(category.name.trim(), ignoreCase = true)
                 }
                 if (index == -1) Int.MAX_VALUE else index
             }
