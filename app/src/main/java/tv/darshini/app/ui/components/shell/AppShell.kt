@@ -101,6 +101,7 @@ import androidx.compose.ui.focus.focusTarget
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import tv.darshini.app.ui.design.requestFocusSafely
+import tv.darshini.app.ui.design.requestFocusWithRetries
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
@@ -320,7 +321,12 @@ fun AppScreenScaffold(
             LaunchedEffect(fallbackFocusBounce) {
                 if (fallbackFocusBounce > 0) {
                     android.util.Log.d("FocusDebug", "Sink caught fallback focus; bouncing into content")
-                    contentPaneFocusRequester.requestFocusSafely(tag = "FocusDebug", target = "Content pane")
+                    // Retry ladder, not a single shot: the bounce runs right after composition, so
+                    // the content pane often has no laid-out focusable yet (list reload, category
+                    // switch). A failed single shot left focus parked on this invisible sink, one
+                    // D-pad press away from the rail — which is what looked like "focus jumped to
+                    // the sidebar".
+                    contentPaneFocusRequester.requestFocusWithRetries(tag = "FocusDebug", target = "Content pane")
                 }
             }
             Row(modifier = Modifier.fillMaxSize()) {
@@ -507,7 +513,7 @@ fun DetailScreenRailScaffold(
     var fallbackFocusBounce by remember { mutableIntStateOf(0) }
     LaunchedEffect(fallbackFocusBounce) {
         if (fallbackFocusBounce > 0) {
-            contentPaneFocusRequester.requestFocusSafely(tag = "FocusDebug", target = "Detail content pane")
+            contentPaneFocusRequester.requestFocusWithRetries(tag = "FocusDebug", target = "Detail content pane")
         }
     }
     Row(modifier = modifier.fillMaxSize()) {
@@ -1142,10 +1148,15 @@ private fun DestinationRail(
                     isExpanded = isExpanded,
                     modifier = Modifier.focusRequester(requester),
                     onClick = {
-                        if (!currentRoute.startsWith(item.route)) {
+                        if (currentRoute.startsWith(item.route)) {
+                            // Already here: nothing will recompose, so move into the content now.
+                            focusManager.moveFocus(FocusDirection.Right)
+                        } else {
+                            // Navigating: the destination has not composed yet, so moving right in
+                            // this frame targeted the outgoing tree, failed, and left focus on the
+                            // rail. The new screen's own initial-focus effect takes it from here.
                             onNavigate(item.route)
                         }
-                        focusManager.moveFocus(FocusDirection.Right)
                     }
                 )
             }

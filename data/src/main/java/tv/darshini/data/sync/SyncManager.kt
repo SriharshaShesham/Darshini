@@ -704,6 +704,7 @@ class SyncManager @Inject constructor(
                 // Catalog row ids may have been re-issued (first sync after a restore, provider
                 // re-add). Re-point favourites and watch progress at them via their provider-side ids.
                 contentBindingDao.rebind(providerId)
+                seriesDao.expireWatchedSeriesDetails(providerId)
                 updateSyncStatusMetadata(
                     providerId = providerId,
                     status = if (outcome.partial) "PARTIAL" else "SUCCESS"
@@ -998,6 +999,7 @@ class SyncManager @Inject constructor(
                     SyncRepairSection.SERIES -> syncSeriesOnly(provider, onProgress)
                 }
             }
+            if (section == SyncRepairSection.SERIES) seriesDao.expireWatchedSeriesDetails(providerId)
             updateSyncStatusMetadata(
                 providerId = providerId,
                 status = if (outcome.partial) "PARTIAL" else "SUCCESS"

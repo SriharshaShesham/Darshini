@@ -33,7 +33,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -66,15 +68,18 @@ class SeriesDetailViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            providerRepository.getActiveProvider().collect { provider ->
+            // Only the provider's identity matters here. Collecting the whole Provider reloaded the
+            // screen every time sync stamped last_synced_at, which unmounted the episode list and
+            // handed D-pad focus to the sidebar.
+            providerRepository.getActiveProvider().map { it?.id }.distinctUntilChanged().collect { providerId ->
                 providerDetailJob?.cancel()
                 _uiState.value = SeriesDetailUiState(isLoading = true)
-                if (provider == null) {
+                if (providerId == null) {
                     _uiState.update { it.copy(isLoading = false, error = "No active provider") }
                     return@collect
                 }
                 providerDetailJob = launch {
-                    val effectiveProviderId = resolveEffectiveProviderId(provider.id)
+                    val effectiveProviderId = resolveEffectiveProviderId(providerId)
                     loadSeriesDetailsForProvider(effectiveProviderId, seriesId)
                 }
             }

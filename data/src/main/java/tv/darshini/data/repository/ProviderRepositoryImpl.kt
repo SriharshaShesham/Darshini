@@ -34,6 +34,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -68,11 +69,15 @@ class ProviderRepositoryImpl @Inject constructor(
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    // distinctUntilChanged: Room re-runs these queries on ANY write to `providers` (sync stamping
+    // last_synced_at, EPG url writes), so collectors saw a fresh emission with identical data. The
+    // screens restart their load on it, which unmounts the focused content and drops D-pad focus
+    // onto the sidebar mid-browse.
     override fun getProviders(): Flow<List<Provider>> =
-        providerDao.getAll().map { entities -> entities.map { it.toPublicDomain() } }
+        providerDao.getAll().map { entities -> entities.map { it.toPublicDomain() } }.distinctUntilChanged()
 
     override fun getActiveProvider(): Flow<Provider?> =
-        providerDao.getActive().map { it?.toPublicDomain() }
+        providerDao.getActive().map { it?.toPublicDomain() }.distinctUntilChanged()
 
     override suspend fun getProvider(id: Long): Provider? =
         providerDao.getById(id)?.toPublicDomain()

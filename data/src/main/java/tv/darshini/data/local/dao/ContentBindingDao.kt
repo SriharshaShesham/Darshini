@@ -242,6 +242,32 @@ abstract class ContentBindingDao {
     )
     abstract suspend fun bindHistoryEpisodeSeriesByTitle(providerId: Long)
 
+    /**
+     * A catalog prune that removed and re-created a series row leaves live episode rows pointing at
+     * a series id that no longer exists, so Continue Watching could not resolve the series at all.
+     * Re-point them by title, and only when the title matches exactly one series, so an ambiguous
+     * name stays as it is rather than binding to the wrong show.
+     */
+    @Query(
+        """
+        UPDATE playback_history SET series_id = (
+            SELECT s.id FROM series s
+             WHERE s.provider_id = playback_history.provider_id AND s.name = playback_history.title
+        )
+        WHERE provider_id = :providerId AND content_type = 'SERIES_EPISODE' AND title != ''
+          AND series_id IS NOT NULL
+          AND NOT EXISTS (
+              SELECT 1 FROM series dead
+               WHERE dead.id = playback_history.series_id
+                 AND dead.provider_id = playback_history.provider_id
+          )
+          AND (SELECT COUNT(*) FROM series s2
+                WHERE s2.provider_id = playback_history.provider_id
+                  AND s2.name = playback_history.title) = 1
+        """
+    )
+    abstract suspend fun repointOrphanedEpisodeSeriesIds(providerId: Long)
+
     @Query(
         """
         UPDATE playback_history SET source_id = (
@@ -304,6 +330,7 @@ abstract class ContentBindingDao {
         bindHistoryMovieByTitle(providerId)
         bindHistoryChannelByTitle(providerId)
         bindHistoryEpisodeSeriesByTitle(providerId)
+        repointOrphanedEpisodeSeriesIds(providerId)
         bindHistoryEpisodeBySeasonEpisode(providerId)
         bindHistoryByStreamUrl(providerId)
 
