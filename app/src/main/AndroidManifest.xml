@@ -170,6 +170,10 @@
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
             android:value="tv.darshini.app.cast.StreamVaultCastOptionsProvider" />
 
+        <receiver
+            android:name=".update.AppUpdateInstallResultReceiver"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

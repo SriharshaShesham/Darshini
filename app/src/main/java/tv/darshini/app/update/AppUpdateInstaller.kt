@@ -1,16 +1,15 @@
 package tv.darshini.app.update
 
 import android.app.DownloadManager
-import android.content.ActivityNotFoundException
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageInstaller
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import androidx.core.content.FileProvider
-import tv.darshini.app.BuildConfig
 import tv.darshini.data.preferences.PreferencesRepository
 import tv.darshini.domain.model.Result
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -27,6 +26,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
 import java.net.URI
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -228,10 +228,10 @@ class AppUpdateInstaller @Inject constructor(
             return@withContext Result.error("No downloaded update is ready to install")
         }
 
-        // No canRequestPackageInstalls() pre-check: the system installer prompts for the
-        // unknown-sources permission itself and deep-links the right page. Our own
-        // ACTION_MANAGE_UNKNOWN_APP_SOURCES redirect opened another user profile's list on
-        // multi-profile TVs (Hisense), so granting it there never took effect and looped.
+        // No canRequestPackageInstalls() pre-check: the system prompts for the unknown-sources
+        // permission itself and deep-links the right page. Our own ACTION_MANAGE_UNKNOWN_APP_SOURCES
+        // redirect opened another user profile's list on multi-profile TVs (Hisense), so granting it
+        // there never took effect and looped.
 
         val apkFile = apkFileForVersion(currentState.versionName)
         if (!apkFile.exists()) {
@@ -262,24 +262,38 @@ class AppUpdateInstaller @Inject constructor(
             android.util.Log.i("AppUpdateInstaller", "APK SHA-256 verified OK for ${apkFile.name}")
         }
 
-        val apkUri = FileProvider.getUriForFile(
-            context,
-            "${BuildConfig.APPLICATION_ID}.fileprovider",
-            apkFile
-        )
-
-        val installIntent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(apkUri, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-
+        // A PackageInstaller session, not ACTION_VIEW on a content URI. Launched from the app
+        // context, ACTION_VIEW reaches the system installer with no calling package on some TV
+        // builds, so it cannot attribute the install to Darshini: the "install unknown apps" grant
+        // is never consulted and the prompt keeps coming back even though it is enabled. A session
+        // is owned by this app, so the grant applies.
+        val installer = context.packageManager.packageInstaller
+        var sessionId = -1
         try {
-            context.startActivity(installIntent)
+            val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
+                setAppPackageName(context.packageName)
+                setSize(apkFile.length())
+            }
+            sessionId = installer.createSession(params)
+            installer.openSession(sessionId).use { session ->
+                session.openWrite("base.apk", 0, apkFile.length()).use { output ->
+                    apkFile.inputStream().use { input -> input.copyTo(output) }
+                    session.fsync(output)
+                }
+                val resultIntent = Intent(context, AppUpdateInstallResultReceiver::class.java)
+                    .setPackage(context.packageName)
+                // Mutable: the installer fills in the status extras.
+                val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
+                val pendingIntent = PendingIntent.getBroadcast(context, sessionId, resultIntent, flags)
+                session.commit(pendingIntent.intentSender)
+            }
             Result.success(Unit)
-        } catch (error: ActivityNotFoundException) {
-            Result.error("No package installer is available on this device", error)
+        } catch (error: IOException) {
+            if (sessionId != -1) runCatching { installer.abandonSession(sessionId) }
+            Result.error("The update could not be prepared for install", error)
         } catch (error: SecurityException) {
+            if (sessionId != -1) runCatching { installer.abandonSession(sessionId) }
             Result.error("The package installer could not be launched", error)
         }
     }
