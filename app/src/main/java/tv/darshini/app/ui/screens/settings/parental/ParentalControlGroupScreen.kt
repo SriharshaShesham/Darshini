@@ -106,7 +106,7 @@ fun ParentalControlGroupScreen(
         }
         .sortedBy { item ->
             val order = categoryOrderByType[selectedType] ?: emptyList()
-            val idx = order.indexOfFirst { it.equals(item.category.name, ignoreCase = true) }
+            val idx = order.indexOfFirst { it.equals(item.category.name.trim(), ignoreCase = true) }
             if (idx < 0) Int.MAX_VALUE else idx
         }
     val hiddenCount = uiState.categories.count { item ->

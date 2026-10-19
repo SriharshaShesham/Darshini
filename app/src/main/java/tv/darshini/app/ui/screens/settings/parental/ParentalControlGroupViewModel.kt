@@ -256,9 +256,18 @@ class ParentalControlGroupViewModel @Inject constructor(
         type: ContentType,
         transform: (List<String>, Int) -> List<String>
     ) {
-        val allCategories = uiState.value.categories.filter { it.category.type == type }.map { it.category.name }
-        val current = _categoryOrderByType.value[type]?.takeIf { it.isNotEmpty() } ?: allCategories
-        val idx = current.indexOfFirst { it.equals(categoryName, ignoreCase = true) }
+        // Start from the full list as the screen shows it: saved order first, then categories the
+        // provider added after the order was saved. Using the saved list alone made a new category
+        // unmovable — it wasn't found in that list, so the move silently did nothing.
+        val saved = _categoryOrderByType.value[type].orEmpty()
+        val current = uiState.value.categories
+            .filter { it.category.type == type }
+            .map { it.category.name.trim() }
+            .distinctBy { it.lowercase() }
+            .sortedBy { name ->
+                saved.indexOfFirst { it.equals(name, ignoreCase = true) }.takeIf { it >= 0 } ?: Int.MAX_VALUE
+            }
+        val idx = current.indexOfFirst { it.equals(categoryName.trim(), ignoreCase = true) }
             .takeIf { it >= 0 } ?: return
         val updated = transform(current, idx)
         _categoryOrderByType.value = _categoryOrderByType.value + (type to updated)

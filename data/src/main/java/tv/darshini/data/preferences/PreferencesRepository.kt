@@ -86,6 +86,8 @@ class PreferencesRepository @Inject constructor(
     private val searchHistoryDao: SearchHistoryDao
 ) : ParentalControlSessionStore, ParentalPinVerifier {
     companion object {
+        /** ASCII unit separator — cannot occur in a category name, unlike ",". */
+        private const val CATEGORY_PRIORITY_SEPARATOR = "\u001F"
         private const val AUDIO_VIDEO_OFFSET_MIN_MS = -2_000
         private const val AUDIO_VIDEO_OFFSET_MAX_MS = 2_000
         private const val PIN_SALT_BYTES = 16
@@ -1471,7 +1473,7 @@ class PreferencesRepository @Inject constructor(
                     globalEncoded.split(",").map { it.trim().lowercase() }.filter { it.isNotBlank() }
                 }
             } else {
-                encoded.split(",").map { it.trim().lowercase() }.filter { it.isNotBlank() }
+                decodeCategoryPriority(encoded)
             }
         }
     }
@@ -1479,8 +1481,20 @@ class PreferencesRepository @Inject constructor(
     suspend fun setCategoryLanguagePriority(providerId: Long, type: ContentType, languages: List<String>) {
         val key = stringPreferencesKey("category_priority_${providerId}_${type.name.lowercase()}")
         context.dataStore.edit { preferences ->
-            preferences[key] = languages.joinToString(",") { it.trim().lowercase() }
+            // Leading separator marks the new format even for a single-entry list.
+            preferences[key] = languages.joinToString(
+                separator = CATEGORY_PRIORITY_SEPARATOR,
+                prefix = CATEGORY_PRIORITY_SEPARATOR
+            ) { it.trim().lowercase() }
         }
+    }
+
+    // Entries are full category names, which can contain commas ("Action, Adventure"). Splitting on
+    // "," broke such a name into fragments that matched nothing, so it sank to the bottom. Values
+    // written before the separator change have no leading separator and fall back to the comma split.
+    private fun decodeCategoryPriority(encoded: String): List<String> {
+        val separator = if (encoded.startsWith(CATEGORY_PRIORITY_SEPARATOR)) CATEGORY_PRIORITY_SEPARATOR else ","
+        return encoded.split(separator).map { it.trim().lowercase() }.filter { it.isNotBlank() }
     }
 
     suspend fun setAppHomeDashboardShelves(shelves: List<AppHomeDashboardShelf>) {

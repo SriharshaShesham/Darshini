@@ -48,7 +48,7 @@ internal fun CategoryLanguagePriorityDialog(
 ) {
     var draftCategories by remember(availableCategories, currentPriority) {
         val sortedByPriority = availableCategories.sortedBy { category ->
-            val index = currentPriority.indexOfFirst { it.equals(category.name, ignoreCase = true) }
+            val index = currentPriority.indexOfFirst { it.equals(category.name.trim(), ignoreCase = true) }
             if (index == -1) Int.MAX_VALUE else index
         }
         mutableStateOf(sortedByPriority)
