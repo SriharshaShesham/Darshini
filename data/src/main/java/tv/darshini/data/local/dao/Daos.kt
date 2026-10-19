@@ -1704,6 +1704,21 @@ interface MovieDao {
 @Dao
 @RewriteQueriesToDropUnusedColumns
 interface SeriesDao {
+    // Sync keeps cached episode lists; clearing detail_hydrated_at makes the next open of a series
+    // the user is watching refetch get_series_info, so episodes the provider added show up.
+    @Query("""
+        UPDATE series SET detail_hydrated_at = 0
+        WHERE provider_id = :providerId AND detail_hydrated_at > 0 AND id IN (
+            SELECT series_id FROM playback_history
+            WHERE content_type = 'SERIES_EPISODE' AND provider_id = :providerId AND series_id IS NOT NULL
+            UNION
+            SELECT episodes.series_id FROM episodes
+            JOIN playback_history ON playback_history.content_id = episodes.id
+            WHERE playback_history.content_type = 'SERIES_EPISODE' AND episodes.provider_id = :providerId
+        )
+    """)
+    suspend fun expireWatchedSeriesDetails(providerId: Long): Int
+
     @Query("SELECT * FROM series WHERE provider_id = :providerId ORDER BY last_modified DESC, name ASC, id ASC")
     fun getByProvider(providerId: Long): Flow<List<SeriesBrowseEntity>>
 
@@ -2765,14 +2780,66 @@ interface EpisodeDao {
     """)
     suspend fun restoreWatchProgress(seriesId: Long)
 
+    // playback_history.source_id (the provider-side episode id) is only ever backfilled by the
+    // post-sync rebind, so a row written since the last sync still carries source_id = 0. Capture it
+    // here, while the old episode rows are still present, or the rebind below has nothing to match
+    // on and the row is stranded on an id that is about to be deleted.
+    @Query("""
+        UPDATE playback_history SET source_id = (
+            SELECT e.episode_id FROM episodes e
+            WHERE e.id = playback_history.content_id
+              AND e.provider_id = playback_history.provider_id
+              AND e.episode_id > 0
+        )
+        WHERE content_type = 'SERIES_EPISODE' AND source_id = 0 AND content_id > 0
+          AND series_id = :seriesId
+          AND EXISTS (
+              SELECT 1 FROM episodes e2
+              WHERE e2.id = playback_history.content_id
+                AND e2.provider_id = playback_history.provider_id
+                AND e2.episode_id > 0
+          )
+    """)
+    suspend fun captureHistorySourceIds(seriesId: Long)
+
+    // A refetch deletes and re-inserts the series' episodes, so rows for episodes whose provider-side
+    // id changed (or that the catalog prune re-created) point at an id that no longer exists. Those
+    // rows lose their watch state, which made the series resume at some long-finished episode
+    // instead of the one last watched. Re-point them: provider-side id first, then the
+    // season/episode coordinates the row already stores.
+    @Query("""
+        UPDATE OR IGNORE playback_history SET content_id = COALESCE(
+            (SELECT MIN(e.id) FROM episodes e
+              WHERE e.series_id = :seriesId
+                AND e.provider_id = playback_history.provider_id
+                AND playback_history.source_id != 0
+                AND e.episode_id = playback_history.source_id),
+            (SELECT MIN(e.id) FROM episodes e
+              WHERE e.series_id = :seriesId
+                AND e.provider_id = playback_history.provider_id
+                AND e.season_number = playback_history.season_number
+                AND e.episode_number = playback_history.episode_number),
+            content_id
+        )
+        WHERE content_type = 'SERIES_EPISODE' AND series_id = :seriesId AND content_id > 0
+          AND NOT EXISTS (
+              SELECT 1 FROM episodes e2
+              WHERE e2.id = playback_history.content_id
+                AND e2.provider_id = playback_history.provider_id
+          )
+    """)
+    suspend fun rebindHistoryToEpisodes(seriesId: Long)
+
     @Transaction
     suspend fun replaceAll(seriesId: Long, providerId: Long, episodes: List<EpisodeEntity>) {
         val existingByRemoteId = getIdMappings(providerId, seriesId).associate { it.remoteId to it.id }
         val remapped = episodes
             .distinctBy { it.episodeId }
             .map { entity -> entity.copy(id = existingByRemoteId[entity.episodeId] ?: 0L) }
+        captureHistorySourceIds(seriesId)
         deleteBySeries(seriesId)
         insertAll(remapped)
+        rebindHistoryToEpisodes(seriesId)
         restoreWatchProgress(seriesId)
     }
 }

@@ -170,6 +170,10 @@ fun MoviesScreen(
         FocusRestoreHost(
             enabled = !uiState.isLoading && uiState.errorMessage == null,
             onRestore = {
+                // Wait for rows to exist: the requester is attached to a content item, so firing the
+                // retry ladder against an empty list burned all attempts and never ran again,
+                // leaving focus on the shell's fallback sink next to the rail.
+                snapshotFlow { uiState.selectedCategoryItems.isNotEmpty() || uiState.moviesByCategory.isNotEmpty() || uiState.categoryNames.isNotEmpty() }.first { it }
                 initialContentFocusRequester.requestFocusWithRetries(tag = "MoviesScreen", target = "Initial movies content")
             }
         ) {

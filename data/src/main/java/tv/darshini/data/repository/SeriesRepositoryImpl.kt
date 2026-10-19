@@ -654,6 +654,9 @@ class SeriesRepositoryImpl @Inject constructor(
 
     private suspend fun buildSeriesWithPersistedEpisodes(seriesEntity: SeriesEntity): Series {
         // playback_history is the source of truth; heals episode rows whose watch state a refetch dropped.
+        // Rebind first: a row still pointing at an episode id a previous refetch deleted carries no
+        // watch state onto the new row, which is what made resume land on a long-finished episode.
+        episodeDao.rebindHistoryToEpisodes(seriesEntity.id)
         episodeDao.restoreWatchProgress(seriesEntity.id)
         val episodes = episodeDao.getBySeriesSync(seriesEntity.id).map { it.toDomain() }
         val seasons = episodes.groupBy { it.seasonNumber }
