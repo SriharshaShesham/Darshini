@@ -67,7 +67,6 @@ translations/
 releases/*.apk
 
 # AI tooling
-.claude/
 .opencode/
 
 # Dev handoff notes
