@@ -2,8 +2,45 @@
 
 Darshini is a TV-first IPTV player for Android TV built with Kotlin, Jetpack Compose, Room, Hilt, and Media3. This project is based on the excellent open-source project **Fredolx/fred-tv-mobile** (StreamVault). Special thanks to the original developers for their work.
 
+---
 
+## Screenshots
 
+> All channels, titles and artwork shown here are fictional demo data served by [`tools/demo-xtream-server`](tools/demo-xtream-server/).
+
+### Watch
+
+| Home | Live TV with channel preview |
+|---|---|
+| ![Home with favorite channels, recent channels and Continue Watching](docs/screenshots/home.jpg) | ![Live TV categories, channel list with now-playing info and live preview](docs/screenshots/live-tv.jpg) |
+| **TV Guide** | **Player** |
+| ![Guide grid with live preview and program details](docs/screenshots/guide.jpg) | ![Player controls with next-episode and episode list buttons](docs/screenshots/player.jpg) |
+
+### Movies & Series
+
+| Movies | Movie details |
+|---|---|
+| ![Movies with Continue Watching and Saved shelves](docs/screenshots/movies.jpg) | ![Movie details with Continue and Unwatch buttons](docs/screenshots/movie-details.jpg) |
+| **Series categories with on-demand sync** | **Series details** |
+| ![Series category row with See all and Sync buttons](docs/screenshots/series.jpg) | ![Series details with seasons](docs/screenshots/series-details.jpg) |
+| **Episodes** | **Search** |
+| ![Episode list with thumbnails, download and copy URL](docs/screenshots/series-episodes.jpg) | ![Grouped search results](docs/screenshots/search.jpg) |
+
+### Favorites & Continue Watching
+
+| Continue where you left off | Mark channels as favorites |
+|---|---|
+| ![Continue Watching row on Home](docs/screenshots/continue-watching.jpg) | ![Channel options: add to favorites, split screen, hide, custom groups](docs/screenshots/channel-favorite.jpg) |
+
+### Setup & Settings
+
+| Add a provider | Provider settings |
+|---|---|
+| ![Add provider: Xtream, Stalker, M3U URL or file, Jellyfin](docs/screenshots/add-provider.jpg) | ![Provider details with catalog counts and diagnostics](docs/screenshots/provider-settings.jpg) |
+| **Backup to Google Drive** | **Hide / show categories** |
+| ![Backup and restore with Google Drive sync](docs/screenshots/backup-restore.jpg) | ![Category Controls: hide, unhide and reorder categories](docs/screenshots/category-controls.jpg) |
+| **Settings** | **Collapsible sidebar** |
+| ![General settings: theme, category controls, automatic sync](docs/screenshots/settings.jpg) | ![Expanded sidebar navigation](docs/screenshots/sidebar.jpg) |
 
 ---
 
